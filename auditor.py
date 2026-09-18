@@ -25,7 +25,7 @@ while quit == False:
         print("Stock Quantity entered:", inputQty)
         #6. Manage State: Keep a running total of the inventory.
         inv += int(inputQty)
-            #7. Trigger Overstock Alert: If the total inventory exceeds 500 units, print an alert and break the loop immediately. (keep in mind of the conditional flow we discussed this week: if, elif and else)
+        #7. Trigger Overstock Alert: If the total inventory exceeds 500 units, print an alert and break the loop immediately. (keep in mind of the conditional flow we discussed this week: if, elif and else)
         if int(inv) > 500:
             print("ALERT: Overstock! Total inventory exceeds 500 units.")
             errorcount += 1
