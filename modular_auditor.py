@@ -33,10 +33,11 @@ def calculate_tax(new_value):
     print("Tax for this delivery: S$", tax)
     return tax
 
-#4d. generate_report(current_total, totaltax, failed_attempts): A dedicated function to print the final summary. 
-def generate_report(current_total, totaltax, failed_attempts):
+#4d. generate_report(current_total, entrycount, totaltax, failed_attempts): A dedicated function to print the final summary. 
+def generate_report(current_total, entrycount,totaltax, failed_attempts):
     print("\n\033[1m", "Report Summary:", "\033[0m")
     print("Total Units Processed:", current_total)
+    print("Total Deliveries Processed:", entrycount)
     print("Total Tax Paid: S$", totaltax)
     print("Number of Failed/Rejected Entries:", failed_attempts)
 
@@ -68,4 +69,4 @@ while quit == False:
     totaltax += tax
     quit = overstock_alert(current_total)
     
-generate_report(current_total, totaltax, failed_attempts)  
+generate_report(current_total, entrycount, totaltax, failed_attempts)  
