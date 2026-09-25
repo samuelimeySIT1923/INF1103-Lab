@@ -1,11 +1,34 @@
-#Persistence: At the start of the program, read the information previously saved in the inventory file. If the inventory file does not exist, start with an empty inventory and continue running without producing an error. 
-file = open('orders.txt','r')
+
+
+
+#4. Modularity: Maintain your functional design. Create a load_inventory() and save_inventory() function. 
+def load_inventory(totalorderlist):
+    #Persistence: At the start of the program, read the information previously saved in the inventory file.
+    try:
+        with open('inventory.txt', 'r') as file:
+            totalorderlist = file.readlines()
+            print("Current Orders:")
+            print(totalorderlist)
+    #If the inventory file does not exist, start with an empty inventory and continue running without producing an error.
+    except FileNotFoundError:
+         totalorderlist = []
+    return totalorderlist
+
+def backup(totalorderlist,neworderlist):
+    totalorderlist.extend(neworderlist)
+    with open('inventory.txt', 'a') as file:
+        print("New orders Added:")
+        #Print each product [Order no, Product Name, Quantity]:
+        for o in range(0, len(neworderlist), 3):
+            #file.write(neworderlist[o : o + 3] + '\n')
+            print(neworderlist[o : o + 3] + '\n')
+    print("Order sucessfully saved to inventory.txt")
+    return totalorderlist
+
+
 #2. History Tracking: Use a Python list (array) to store every valid transaction 
 #amount entered. 
-#3. Write-Back: When the user types quit, save the final total and the transaction history list to inventory.txt. 
-#4. Modularity: Maintain your functional design. Create a load_inventory() and save_inventory() function. 
-
-
+neworderlist = []
 
 #1. Initialize the inventory to zero in the start
 quit = False
@@ -56,7 +79,8 @@ def overstock_alert(current_total):
         return True
     return False
 
-#2. un in a continuous loop asking user to enter a stock quantity, until the user types quit. 
+load_inventory()
+#2. Run in a continuous loop asking user to enter a stock quantity, until the user types quit. 
 while quit == False:
     new_value, has_error = get_valid_input()
     if new_value == 'quit':
@@ -77,5 +101,9 @@ while quit == False:
     #3c. Update any counters and records you are tracking, such as the number of deliveries processed. 
     totaltax += tax
     quit = overstock_alert(current_total)
-    
-generate_report(current_total, entrycount, totaltax, failed_attempts)  
+
+#3. Write-Back: When the user types quit, save the final total and the transaction history list to inventory.txt. 
+
+
+generate_report(current_total, entrycount, totaltax, failed_attempts)
+file.close()  
