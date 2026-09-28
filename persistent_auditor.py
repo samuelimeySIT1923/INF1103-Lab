@@ -4,47 +4,57 @@ status = False
 current_total = 0
 failed_attempts = 0
 totaltax = 0
-final_total = 0
-entry_count = 0
+
+
 Overstock_Limit = 500
 #2. History Tracking: Use a Python list (array) to store every valid transaction 
 #amount entered. 
-totalOrderList = []
+
 
 
 #4. Modularity: Maintain your functional design. Create a load_inventory() and save_inventory() function. 
-def load_inventory(totalOrderList, entry_count, final_total):
+def load_inventory():
+    totalOrderList = []
+    entry_count = 0
+    final_total = 0
     #Persistence: At the start of the program, read the information previously saved in the inventory file.
     try:
         with open('inventory.txt', 'r') as file:
             #Split the line into its components and convert the quantity to an integer
-            for line in file:
-                parts = line.strip().split(', ')
-                if len(parts) == 3:
-                    order_no, product_name, qty = parts
-                    totalOrderList.append([int(order_no), product_name, int(qty)])
-                    final_total += int(qty)
-            entry_count = int(totalOrderList[-1][0]) if totalOrderList else 0
+            #for line in file:
+            #    parts = line.strip().split(', ')
+            #    if len(parts) == 3:
+            #        order_no, product_name, qty = parts
+            #        totalOrderList.append([int(order_no), product_name, int(qty)])
+            #        final_total += int(qty)
+            entry_count = int(totalOrderList[-1][0]) if totalOrderList else 0            
             print(f"Current Orders: {totalOrderList}")
+            for order_no, product_name,qty in totalOrderList:
+                print(f"{order_no}, {product_name}, {qty}")   
             print(f"Overall stock input: {final_total}")
     #If the inventory file does not exist, start with an empty inventory and continue running without producing an error.
     except FileNotFoundError:
-         totalOrderList = []
-         entry_count = 0
-         final_total = 0
+        pass
     return totalOrderList, entry_count, final_total
 
-def save_inventory(totalOrderList,current_total):
-    totalOrderList.extend(current_total)
-    with open('inventory.txt', 'a') as file:
-        print("New orders Added:")
+
+
+def save_inventory(totalOrderList,recent_Count,current_total):
+    recentOrders = totalOrderList[recent_Count:]
+    #totalOrderList.extend(current_total)
+    with open('inventory.txt', 'w') as file:
         #Print each product [Order no, Product Name, Quantity]:
-        for o in range(0, len(current_total), 3):
-            chunk = current_total[o : o + 3]
-            newTxtLine = ', '.join(str(x) for x in chunk)
-            file.write(newTxtLine + '\n')
-            print(newTxtLine)
-    file.close()
+        for order_no, product_name, qty in totalOrderList:
+            file.write(f"{order_no}, {product_name}, {qty}\n")
+        file.write(f"Total: {current_total}\n")
+
+    recentOrders = totalOrderList[recent_Count]
+    print("\nNew orders added:")
+    if recentOrders:
+        for order_no, product_name, qty in recentOrders:
+            print(f"  #{order_no}, {product_name}, {qty}")
+    else:
+        print("None")      
     print("Order sucessfully saved to inventory.txt")
     return totalOrderList, current_total
 
@@ -64,7 +74,7 @@ def get_valid_input(entry_count):
         product_name = input("Enter product name: ") 
         #Update any counters and records you are tracking, such as the number of deliveries processed. 
         entry_count += 1
-        print(f"\n\033[1m Entry Count {entry_count}: {product_name}\033[0m")
+        print(f"\n\033[1m Entry Count {entry_count}: \n Product Name: {product_name}\033[0m")
         return 'ok', entry_count, [entry_count, product_name, qty]
 
  #Calculates the new total and returns it.        
@@ -85,6 +95,9 @@ def generate_report(current_total, totaltax, failed_attempts):
     print("Total Units Processed:", current_total)
     print("Total Tax Paid: S$", totaltax)
     print("Number of Failed/Rejected Entries:", failed_attempts)
+    #print("\nNew orders added:")
+    #for order_no, product_name, qty in totalOrderList[recent_Count]:
+    #    print(f"{order_no}, {product_name}, {qty}")
 
 def overstock_alert(current_total):
     if current_total > Overstock_Limit:
@@ -93,6 +106,8 @@ def overstock_alert(current_total):
     return False
 
 totalOrderList, entry_count, final_total = load_inventory()
+recent_Count = len(totalOrderList)
+current_total = final_total
 #Continuous loop asking user to enter a stock quantity, until the user types quit. 
 while quit == False:
     status, entry_count, input_value = get_valid_input(entry_count)
@@ -116,5 +131,5 @@ while quit == False:
 generate_report(current_total, totaltax, failed_attempts)
 
 #3. Write-Back: When the user types quit, save the final total and the transaction history list to inventory.txt. 
-save_inventory(totalOrderList,current_total)
+save_inventory(totalOrderList, recent_Count, current_total)
 
