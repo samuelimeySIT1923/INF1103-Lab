@@ -29,9 +29,12 @@ def load_inventory():
             #        final_total += int(qty)
             entry_count = int(totalOrderList[-1][0]) if totalOrderList else 0            
             print(f"Current Orders: {totalOrderList}")
-            for order_no, product_name,qty in totalOrderList:
-                print(f"{order_no}, {product_name}, {qty}")   
-            print(f"Overall stock input: {final_total}")
+            if totalOrderList == []:
+                pass
+            else:
+                for order_no, product_name,qty in totalOrderList:
+                    print(f"{order_no}, {product_name}, {qty}")   
+                print(f"Overall stock input: {final_total}")
     #If the inventory file does not exist, start with an empty inventory and continue running without producing an error.
     except FileNotFoundError:
         pass
@@ -48,11 +51,10 @@ def save_inventory(totalOrderList,recent_Count,current_total):
             file.write(f"{order_no}, {product_name}, {qty}\n")
         file.write(f"Total: {current_total}\n")
 
-    recentOrders = totalOrderList[recent_Count]
     print("\nNew orders added:")
     if recentOrders:
         for order_no, product_name, qty in recentOrders:
-            print(f"  #{order_no}, {product_name}, {qty}")
+            print(f"{order_no}, {product_name}, {qty}")
     else:
         print("None")      
     print("Order sucessfully saved to inventory.txt")
