@@ -4,13 +4,9 @@ status = False
 current_total = 0
 failed_attempts = 0
 totaltax = 0
-
-
 Overstock_Limit = 500
 #2. History Tracking: Use a Python list (array) to store every valid transaction 
 #amount entered. 
-
-
 
 #4. Modularity: Maintain your functional design. Create a load_inventory() and save_inventory() function. 
 def load_inventory():
@@ -20,21 +16,19 @@ def load_inventory():
     #Persistence: At the start of the program, read the information previously saved in the inventory file.
     try:
         with open('inventory.txt', 'r') as file:
-            #Split the line into its components and convert the quantity to an integer
-            #for line in file:
-            #    parts = line.strip().split(', ')
-            #    if len(parts) == 3:
-            #        order_no, product_name, qty = parts
-            #        totalOrderList.append([int(order_no), product_name, int(qty)])
-            #        final_total += int(qty)
-            entry_count = int(totalOrderList[-1][0]) if totalOrderList else 0            
-            print(f"Current Orders: {totalOrderList}")
-            if totalOrderList == []:
-                pass
-            else:
-                for order_no, product_name,qty in totalOrderList:
-                    print(f"{order_no}, {product_name}, {qty}")   
-                print(f"Overall stock input: {final_total}")
+            for line in file:
+                parts = line.strip().split(', ')
+                if len(parts) == 3:
+                    order_no, product_name, qty = parts
+                    totalOrderList.append([int(order_no), product_name, int(qty)])
+                    final_total += int(qty)
+        # After the file is read, fill list and print out
+        entry_count = totalOrderList[-1][0] if totalOrderList else 0
+        if totalOrderList:
+            print("Current Orders:")
+            for order_no, product_name, qty in totalOrderList:
+                print(f"{order_no}, {product_name}, {qty}")
+            print(f"Overall stock input: {final_total}")
     #If the inventory file does not exist, start with an empty inventory and continue running without producing an error.
     except FileNotFoundError:
         pass
