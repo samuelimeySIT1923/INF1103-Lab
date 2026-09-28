@@ -1,3 +1,6 @@
+import sys
+import os
+
 #Initialize the inventory to zero in the start
 quit = False
 status = False
@@ -5,8 +8,6 @@ current_total = 0
 failed_attempts = 0
 totaltax = 0
 Overstock_Limit = 500
-#2. History Tracking: Use a Python list (array) to store every valid transaction 
-#amount entered. 
 
 #4. Modularity: Maintain your functional design. Create a load_inventory() and save_inventory() function. 
 def load_inventory():
@@ -56,7 +57,12 @@ def save_inventory(totalOrderList,recent_Count,current_total):
 
 #Handles the prompt, handles input validation, and returns a valid integer or a "quit" signal. 
 def get_valid_input(entry_count):
-    qty = input("Enter stock quantity (or type 'quit' to exit): ")
+    try:
+        qty = input("Enter stock quantity (or type 'quit' to exit): ")
+    except EOFError:
+        print("\nNo more input available. Exiting gracefully.")
+        return 'quit', entry_count, None
+    
     if qty.lower() == 'quit':  
             return 'quit', entry_count, None
     if not (qty.lstrip('-').isdigit()):
@@ -67,7 +73,11 @@ def get_valid_input(entry_count):
             print("Error: Negative numbers are not allowed. Pls input a positive number or type 'quit' to exit.")
             return 'error', entry_count, None
     else:
-        product_name = input("Enter product name: ") 
+        try:
+            product_name = input("Enter product name: ")
+        except EOFError:
+            print("\nNo more input available. Exiting gracefully.")
+            return 'quit', entry_count, None
         #Update any counters and records you are tracking, such as the number of deliveries processed. 
         entry_count += 1
         print(f"\n\033[1m Entry Count {entry_count}: \n Product Name: {product_name}\033[0m")
@@ -128,4 +138,3 @@ generate_report(current_total, totaltax, failed_attempts)
 
 #3. Write-Back: When the user types quit, save the final total and the transaction history list to inventory.txt. 
 save_inventory(totalOrderList, recent_Count, current_total)
-
