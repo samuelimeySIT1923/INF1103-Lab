@@ -74,3 +74,74 @@ def quarantine_corrupt_file(path: Path = data_path) -> Optional[Path]:
         return None
     logger.warning("Corrupt data file moved to %s", backup_path)
     return backup_path
+
+
+
+#-----------------------------------------------------------------------------------#
+#Establish functions to load and save collated data
+
+def load_collated_data(path: Path = data_path) -> pd.DataFrame:
+    """Load all saved records, creating the file if missing and recovering if it is corrupt."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not path.exists() or path.stat().st_size == 0:
+            df = empty_records()
+            write_records(df, path)
+            return df
+
+        try:
+            raw_df = pd.read_csv(path, dtype={"transaction_id": str})
+        except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError):
+            logger.exception("Data file %s could not be parsed", path)
+            raw_df = None
+
+        if raw_df is None or not any(col in raw_df.columns for col in columns):
+            quarantine_corrupt_file(path)
+            df = empty_records()
+            write_records(df, path)
+            return df
+
+        df = raw_df.copy()
+        for col in columns:
+            if col not in df.columns:
+                df[col] = ""
+        df = df[columns]
+
+        df = df[~df["transaction_id"].astype(str).str.startswith(fallback_id_prefix)]
+        df = df.reset_index(drop=True)
+
+        df["transaction_type"] = df["transaction_type"].replace(legacy_type_map)
+
+        df = assign_sequential_ids(df)
+
+        if not df.equals(raw_df):
+            write_records(df, path)
+        return df
+
+    except OSError:
+        logger.exception("Could not access data file %s", path)
+        return empty_records()
+
+
+def save_collated_data(
+    new_records: List[Dict[str, Any]],
+    path: Path = data_path,
+) -> pd.DataFrame:
+    """Append new standardized records to the CSV and return the updated DataFrame."""
+    existing_df = load_collated_data(path)
+    if not new_records:
+        return existing_df
+
+    new_df = pd.DataFrame(new_records, columns=columns)
+    new_df["transaction_id"] = ""  # real IDs are assigned below
+
+    combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+    combined_df = assign_sequential_ids(combined_df)
+
+    try:
+        write_records(combined_df, path)
+    except OSError:
+        logger.exception("Could not save records to %s", path)
+        return existing_df
+    return combined_df
