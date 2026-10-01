@@ -145,3 +145,48 @@ def save_collated_data(
         logger.exception("Could not save records to %s", path)
         return existing_df
     return combined_df
+
+
+
+#-----------------------------------------------------------------------------------#
+#Establish filter and query functions
+
+def get_available_months(df: pd.DataFrame) -> List[int]:
+    """Return the sorted month numbers (1-12) that appear in the records."""
+    dates = pd.to_datetime(df["date_and_time"], errors="coerce")
+    return sorted(int(m) for m in dates.dt.month.dropna().unique())
+
+
+def filter_records(
+    df: pd.DataFrame,
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+    category: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    retailer: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Return the records matching every filter that is given (None means no filter).
+
+    `retailer` is a case-insensitive partial match; the others are exact.
+    Records with an unreadable date are dropped when filtering by month or year.
+    """
+    mask = pd.Series(True, index=df.index)
+
+    if month is not None or year is not None:
+        dates = pd.to_datetime(df["date_and_time"], errors="coerce")
+        if month is not None:
+            mask &= dates.dt.month == month
+        if year is not None:
+            mask &= dates.dt.year == year
+
+    if category is not None:
+        mask &= df["category"] == category
+
+    if transaction_type is not None:
+        mask &= df["transaction_type"] == transaction_type
+
+    if retailer is not None:
+        mask &= df["retailer"].astype(str).str.contains(retailer, case=False, regex=False)
+
+    return df[mask].reset_index(drop=True)
