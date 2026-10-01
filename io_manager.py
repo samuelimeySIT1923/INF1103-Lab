@@ -11,25 +11,7 @@ import pypdf
 import streamlit as st
 
 from ai_manager import extract_batch_standardized_transactions
-
-
-#-----------------------------------------------------------------------------------#
-#Establish columns and data path for collated data
-
-columns = [
-    "transaction_id",
-    "date_and_time",
-    "retailer",
-    "category",
-    "transaction_amount",
-    "transaction_type",
-]
-
-data_path = Path("data/collated_data.csv")
-
-fallback_id_prefix = "TXN-ERR"
-id_width = 5
-legacy_type_map = {"Expense": "Outgoing", "Income": "Incoming"}
+from data_manager import columns, fallback_id_prefix, load_collated_data, save_collated_data
 
 
 #-----------------------------------------------------------------------------------#
@@ -69,69 +51,6 @@ def parse_uploaded_file(uploaded_file: Any) -> List[Any]:
         st.error(f"Error reading file '{uploaded_file.name}': {exc}")
 
     return items
-
-
-def assign_sequential_ids(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    ids = df["transaction_id"].astype(str).str.strip()
-    is_numeric = ids.str.isdigit()
-
-    next_id = int(ids[is_numeric].astype(int).max()) + 1 if is_numeric.any() else 1
-
-    new_ids = ids.copy()
-    new_ids[is_numeric] = ids[is_numeric].astype(int).map(lambda n: f"{n:0{id_width}d}")
-    for idx in df.index[~is_numeric]:
-        new_ids[idx] = f"{next_id:0{id_width}d}"
-        next_id += 1
-
-    df["transaction_id"] = new_ids
-    return df
-
-
-#-----------------------------------------------------------------------------------#
-#Establish functions to load and save collated data
-
-def load_collated_data() -> pd.DataFrame:
-    data_path.parent.mkdir(parents=True, exist_ok=True)
-
-    if data_path.exists() and data_path.stat().st_size > 0:
-        try:
-            raw_df = pd.read_csv(data_path, dtype={"transaction_id": str})
-            df = raw_df.copy()
-
-            for col in columns:
-                if col not in df.columns:
-                    df[col] = ""
-            df = df[columns]
-
-            df = df[~df["transaction_id"].astype(str).str.startswith(fallback_id_prefix)]
-            df = df.reset_index(drop=True)
-
-            df["transaction_type"] = df["transaction_type"].replace(legacy_type_map)
-
-            df = assign_sequential_ids(df)
-
-            if not df.equals(raw_df):
-                df.to_csv(data_path, index=False)
-            return df
-        except Exception:
-            return pd.DataFrame(columns=columns)
-
-    df = pd.DataFrame(columns=columns)
-    df.to_csv(data_path, index=False)
-    return df
-
-
-def save_collated_data(new_records: List[Dict[str, Any]]) -> pd.DataFrame:
-    """Append new standardized records to the CSV and return the updated DataFrame."""
-    existing_df = load_collated_data()
-    new_df = pd.DataFrame(new_records, columns=columns)
-    new_df["transaction_id"] = ""  # real IDs are assigned below
-
-    combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-    combined_df = assign_sequential_ids(combined_df)
-    combined_df.to_csv(data_path, index=False)
-    return combined_df
 
 
 #-----------------------------------------------------------------------------------#
