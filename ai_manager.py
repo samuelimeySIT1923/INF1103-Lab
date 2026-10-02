@@ -381,6 +381,7 @@ def extract_standardized_transaction(
     return create_fallback_record(raw_record)
 
 
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
