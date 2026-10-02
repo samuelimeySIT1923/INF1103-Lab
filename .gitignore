@@ -1,2 +1,8 @@
 __pycache__/
 *.pyc
+.env
+.venv/
+data/collated_data.csv
+data/*.tmp
+data/*.corrupt-*
+.DS_Store
