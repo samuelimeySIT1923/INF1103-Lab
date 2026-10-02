@@ -1,4 +1,12 @@
 import difflib
+
+#Pls install nltk library if not already installed via cmd or terminal using the command [windows+R > cmd] below:
+# pip install nltk
+import nltk
+nltk.download('wordnet')
+from nltk.corpus import wordnet
+
+
 dataBase = []
 categoryType = ["groceries", "food & drink", "entertainment", "transport", "utility bills", "loans bills", "subscriptions bills", "others"]
 
@@ -44,13 +52,42 @@ def swaptransaction(TransactionType, changetransaction):
             return swaptransaction()  # Recursively call until valid input is received
 
 def lookupDescription(Description):
+    wordnet.synsets(Description)
+
+
+
     #WIP
     #lOOKUP words in input to match synonym of categoryType
     #if True > amend category to match categoryType
     #if False > keep category as 'others' and store description in database for future reference
-    print(f"WIP: Looking up description... {Description}")
+    
+
+
+def words_are_similar(word1, word2):
+  syns1 = wordnet.synsets(word1)
+  syns2 = wordnet.synsets(word2)
+
+  max_score = 0
+  for s1 in syns1:
+    for s2 in syns2:
+      score = s1.path_similarity(s2)  # Returns a value between 0 and 1
+      if score and score > max_score:
+        max_score = score
+  return max_score
+
+
+# Example: compare user input to a category anchor word
+user_input = "automobile"
+category_anchor = "car"
+
+similarity_score = words_are_similar(user_input, category_anchor)
+if similarity_score > 0.5:
+  print(f"'{user_input}' matches category related to '{category_anchor}'")
+
+
 
 def entriesinput(errrorCheck, TotalInputCount):
+    errorCheck = None
     TotalInputCount = input("Enter number of entries to input: ")
     if not (TotalInputCount.lstrip('-').isdigit()):
             print("Error: pls enter a valid number.")
@@ -109,6 +146,6 @@ def getdata(errrorCheck, dataBase):
         print(f"Details ID: {Transaction_ID}, Date: {Date}, Time: {Time}, Retailer: {Retailer}, Category: {EntryCategory}, Type: {TransactionType}, Amount: ${TransactionAmount}")
 
 
-
-errrorCheck, dataBase = entriesinput(errrorCheck, dataBase)
-if errrorCheck == 'error':
+TotalInputCount = 0
+errrorCheck, TotalInputCount = entriesinput(errrorCheck, TotalInputCount)
+errrorCheck, dataBase = getdata(errrorCheck, dataBase)
