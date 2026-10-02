@@ -1,8 +1,11 @@
 import difflib
+from string.templatelib import convert
 
 #Pls install nltk library if not already installed via cmd or terminal using the command [windows+R > cmd] below:
 # pip install nltk
 import nltk
+
+from test import words_are_similar
 nltk.download('wordnet')
 from nltk.corpus import wordnet
 
@@ -52,39 +55,25 @@ def swaptransaction(TransactionType, changetransaction):
             return swaptransaction()  # Recursively call until valid input is received
 
 def lookupDescription(Description):
-    wordnet.synsets(Description)
+    #convert to synsets format
+    synsDesc = wordnet.synsets(Description)
+    for category in categoryType:
+        #convert to synsets format
+        synCategory = wordnet.synsets(category)
+        #Compare to item in category Type list
 
+        maxScore = 0
+        for s1 in synsDesc:
+            for s2 in synCategory:
+                score = s1.path_similarity(s2)  # Returns a value between 0 and 1
+                if score and score > maxScore:
+                    maxScore = score
+        return maxScore
 
-
-    #WIP
-    #lOOKUP words in input to match synonym of categoryType
-    #if True > amend category to match categoryType
-    #if False > keep category as 'others' and store description in database for future reference
-    
-
-
-def words_are_similar(word1, word2):
-  syns1 = wordnet.synsets(word1)
-  syns2 = wordnet.synsets(word2)
-
-  max_score = 0
-  for s1 in syns1:
-    for s2 in syns2:
-      score = s1.path_similarity(s2)  # Returns a value between 0 and 1
-      if score and score > max_score:
-        max_score = score
-  return max_score
-
-
-# Example: compare user input to a category anchor word
-user_input = "automobile"
-category_anchor = "car"
-
-similarity_score = words_are_similar(user_input, category_anchor)
-if similarity_score > 0.5:
-  print(f"'{user_input}' matches category related to '{category_anchor}'")
-
-
+        similarity_score = words_are_similar(synsDesc, synCategory)
+        if similarity_score > 0.5:
+            print(f"'{Description}' matches category '{category}'")
+            return category
 
 def entriesinput(errrorCheck, TotalInputCount):
     errorCheck = None
@@ -139,7 +128,9 @@ def getdata(errrorCheck, dataBase):
             #Enable user add transaction description
             Description = input("Please provide more information on this input: ")
             inputFile.append(Description)
-            lookupDescription(Description)
+            EntryCategory = lookupDescription(Description)
+            if EntryCategory is not None:
+                inputFile[5] = EntryCategory
         else:
             inputFile.append(None) 
         print(f"Successfully added transaction {inputNo}!")
