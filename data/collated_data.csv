@@ -1,0 +1,231 @@
+transaction_id,date_and_time,retailer,category,transaction_amount,transaction_type
+00001,2020-08-20,NEFT,Misc,23237.0,Incoming
+00002,2020-08-20,NEFT,Misc,3724.33,Outgoing
+00003,2020-08-20,Commission,Misc,245.0,Incoming
+00004,2020-08-20,NEFT,Misc,12480.0,Incoming
+00005,2020-08-20,RTGS,Misc,11561.0,Outgoing
+00006,2020-08-20,Miscellaneous,Misc,88736.0,Incoming
+00007,2020-08-20,Cheque,Misc,15427.37,Outgoing
+00008,2020-08-20,Miscellaneous,Misc,253.5,Incoming
+00009,2020-08-20,Purchase,Shopping,108245.11,Outgoing
+00010,2020-08-20,Cash,Misc,327.21,Incoming
+00011,2020-08-20,RTGS,Misc,0.88,Incoming
+00012,2020-08-20,Commission,Misc,82.02,Outgoing
+00013,2020-08-20,Miscellaneous,Misc,4.0,Incoming
+00014,2020-08-20,IMPS,Misc,0.0,Incoming
+00015,2020-08-20,IMPS,Misc,2.91,Incoming
+00016,2020-08-20,IMPS,Misc,1.6,Incoming
+00017,2020-08-20,Cash,Misc,41.86,Incoming
+00018,2020-08-20,NEFT,Misc,54.0,Incoming
+00019,2020-08-20,Transfer,Misc,13651.96,Incoming
+00020,2020-08-20,Purchase,Shopping,395.0,Incoming
+00021,2020-08-20,NEFT,Misc,2879.48,Outgoing
+00022,2020-08-20,ATM,Misc,396328.0,Incoming
+00023,2020-08-20,Cheque,Misc,50980.74,Outgoing
+00024,2020-08-20,Commission,Misc,1036130.0,Incoming
+00025,2020-08-20,Interest,Misc,600253.8,Incoming
+00026,2020-08-20,Cheque,Misc,498312.25,Outgoing
+00027,2020-08-20,Miscellaneous,Misc,29830.6,Incoming
+00028,2020-08-20,Cheque,Misc,169418.59,Outgoing
+00029,2020-08-20,Reversal,Misc,1199665.0,Incoming
+00030,2020-08-20,IMPS,Misc,815.0,Incoming
+00031,2020-08-21,RTGS,Misc,2555828.75,Outgoing
+00032,2020-08-21,Bill,Bills,156267.0,Incoming
+00033,2020-08-21,Purchase,Shopping,27137.1,Incoming
+00034,2020-08-21,Cash,Misc,183404.1,Outgoing
+00035,2020-08-21,ATM,Misc,92441.16,Incoming
+00036,2020-08-21,IMPS,Misc,11555.15,Outgoing
+00037,2020-08-21,Cash,Misc,20221.51,Outgoing
+00038,2020-08-21,Transfer,Misc,41.98,Incoming
+00039,2020-08-21,Cheque,Misc,1330252.2,Incoming
+00040,2020-08-21,NEFT,Misc,900558.0,Incoming
+00041,2020-08-21,Cheque,Misc,218953.0,Incoming
+00042,2020-08-21,Transfer,Misc,50454.0,Incoming
+00043,2020-08-21,Commission,Misc,48.3,Incoming
+00044,2020-08-21,NEFT,Misc,0.0,Incoming
+00045,2020-08-21,Interest,Misc,365853.14,Outgoing
+00046,2020-08-21,Bill,Bills,871338.0,Incoming
+00047,2020-08-21,RTGS,Misc,339762.25,Incoming
+00048,2020-08-21,Cash,Misc,82.92,Incoming
+00049,2020-08-21,Commission,Misc,425787.75,Outgoing
+00050,2020-08-21,Transfer,Misc,745128.57,Outgoing
+00051,2020-08-21,Cheque,Misc,3.0,Incoming
+00052,2020-08-21,Cash,Misc,17214.7,Incoming
+00053,2020-08-21,Transfer,Misc,2606.01,Incoming
+00054,2020-08-21,Reversal,Misc,375868.24,Outgoing
+00055,2020-08-21,Interest,Misc,313223.53,Outgoing
+00056,2020-08-21,Debit Card,Misc,6936.91,Incoming
+00057,2020-08-21,RTGS,Misc,524351.52,Outgoing
+00058,2020-08-21,Tax,Bills,30539.44,Incoming
+00059,2020-08-21,Purchase,Shopping,134905.31,Outgoing
+00060,2020-08-21,ATM,Misc,314779.06,Outgoing
+00061,2020-08-21,Tax,Bills,32.4,Incoming
+00062,2020-08-21,Purchase,Shopping,33.0,Incoming
+00063,2020-08-21,Miscellaneous,Misc,419.28,Incoming
+00064,2020-08-21,Purchase,Shopping,8080.75,Incoming
+00065,2020-08-21,Debit Card,Misc,1595.7,Incoming
+00066,2020-08-21,RTGS,Misc,106619.87,Outgoing
+00067,2020-08-21,Cheque,Misc,88849.9,Outgoing
+00068,2020-08-21,Bill,Bills,150643.38,Incoming
+00069,2020-08-21,ATM,Misc,66099.21,Outgoing
+00070,2020-08-21,Miscellaneous,Misc,58754.85,Outgoing
+00071,2020-08-21,Bill,Bills,94007.76,Outgoing
+00072,2020-08-21,ATM,Misc,188015.52,Outgoing
+00073,2020-08-21,Cheque,Misc,127.7,Incoming
+00074,2020-08-21,IMPS,Misc,59.55,Incoming
+00075,2020-08-21,Commission,Misc,31208.11,Incoming
+00076,2020-08-21,Interest,Misc,21941.09,Outgoing
+00077,2020-08-21,Tax,Bills,32911.63,Outgoing
+00078,2020-08-21,RTGS,Misc,710146.5,Incoming
+00079,2020-08-21,Cash,Misc,433.9,Incoming
+00080,2020-08-21,Reversal,Misc,437569.28,Outgoing
+00081,2020-08-21,Commission,Misc,20.5,Incoming
+00082,2020-08-21,Debit Card,Misc,335.0,Incoming
+00083,2020-08-21,Miscellaneous,Misc,437924.78,Outgoing
+00084,2020-08-21,Reversal,Misc,101.1,Incoming
+00085,2020-08-21,Cheque,Misc,183171.0,Incoming
+00086,2020-08-21,Interest,Misc,91636.05,Outgoing
+00087,2020-08-21,IMPS,Misc,13090.86,Outgoing
+00088,2020-08-21,Cash,Misc,2834.5,Incoming
+00089,2020-08-21,Transfer,Misc,20344.92,Outgoing
+00090,2020-08-21,IMPS,Misc,125302.4,Incoming
+00091,2020-08-21,Debit Card,Misc,252.05,Incoming
+00092,2020-08-21,Tax,Bills,46647.31,Outgoing
+00093,2020-08-21,Reversal,Misc,23323.65,Outgoing
+00094,2020-08-21,Tax,Bills,14577.28,Outgoing
+00095,2020-08-21,Purchase,Shopping,51020.5,Outgoing
+00096,2020-08-21,Debit Card,Misc,2.78,Incoming
+00097,2020-08-21,Commission,Misc,300660.0,Incoming
+00098,2020-08-21,IMPS,Misc,87920.82,Outgoing
+00099,2020-08-21,ATM,Misc,26376.25,Outgoing
+00100,2020-08-21,Transfer,Misc,193326.38,Incoming
+00101,2020-08-20,NEFT,Misc,23237.0,Incoming
+00102,2020-08-20,NEFT,Misc,3724.33,Outgoing
+00103,2020-08-20,Commission,Misc,245.0,Incoming
+00104,2020-08-20,NEFT,Misc,12480.0,Incoming
+00105,2020-08-20,RTGS,Misc,11561.0,Outgoing
+00106,2020-08-20,Miscellaneous,Misc,88736.0,Incoming
+00107,2020-08-20,Cheque,Misc,15427.37,Outgoing
+00108,2020-08-20,Miscellaneous,Misc,253.5,Incoming
+00109,2020-08-20,Purchase,Shopping,108245.11,Outgoing
+00110,2020-08-20,Cash,Misc,327.21,Incoming
+00111,2020-08-20,RTGS,Misc,0.88,Incoming
+00112,2020-08-20,Commission,Misc,82.02,Outgoing
+00113,2020-08-20,Miscellaneous,Misc,4.0,Incoming
+00114,2020-08-20,IMPS,Misc,0.0,Outgoing
+00115,2020-08-20,IMPS,Misc,2.91,Incoming
+00116,2020-08-20,IMPS,Misc,1.6,Incoming
+00117,2020-08-20,Cash,Misc,41.86,Incoming
+00118,2020-08-20,NEFT,Misc,54.0,Incoming
+00119,2020-08-20,Transfer,Misc,13651.96,Incoming
+00120,2020-08-20,Purchase,Shopping,395.0,Incoming
+00121,2020-08-20,NEFT,Misc,2879.48,Outgoing
+00122,2020-08-20,ATM,Misc,396328.0,Incoming
+00123,2020-08-20,Cheque,Misc,50980.74,Outgoing
+00124,2020-08-20,Commission,Misc,1036130.0,Incoming
+00125,2020-08-20,Interest,Misc,600253.8,Incoming
+00126,2020-08-20,Cheque,Misc,498312.25,Outgoing
+00127,2020-08-20,Miscellaneous,Misc,29830.6,Incoming
+00128,2020-08-20,Cheque,Misc,169418.59,Outgoing
+00129,2020-08-20,Reversal,Misc,1199665.0,Incoming
+00130,2020-08-20,IMPS,Misc,815.0,Incoming
+00131,2021-08-21,RTGS,Misc,2555828.75,Outgoing
+00132,2021-08-21,Bill,Bills,156267.0,Incoming
+00133,2021-08-21,Purchase,Shopping,27137.1,Incoming
+00134,2021-08-21,Cash,Misc,183404.1,Outgoing
+00135,2021-08-21,ATM,Misc,92441.16,Incoming
+00136,2021-08-21,IMPS,Misc,11555.15,Outgoing
+00137,2021-08-21,Cash,Misc,20221.51,Outgoing
+00138,2021-08-21,Transfer,Misc,41.98,Incoming
+00139,2021-08-21,Cheque,Misc,1330252.2,Incoming
+00140,2021-08-21,NEFT,Misc,900558.0,Incoming
+00141,2021-08-21,Cheque,Misc,218953.0,Incoming
+00142,2021-08-21,Transfer,Misc,50454.0,Incoming
+00143,2021-08-21,Commission,Misc,48.3,Incoming
+00144,2021-08-21,NEFT,Misc,0.0,Outgoing
+00145,2021-08-21,Interest,Misc,365853.14,Outgoing
+00146,2021-08-21,Bill,Bills,871338.0,Incoming
+00147,2021-08-21,RTGS,Misc,339762.25,Incoming
+00148,2021-08-21,Cash,Misc,82.92,Incoming
+00149,2021-08-21,Commission,Misc,425787.75,Outgoing
+00150,2021-08-21,Transfer,Misc,745128.57,Outgoing
+00151,2020-08-21,Cheque,Misc,3.0,Incoming
+00152,2020-08-21,Cash,Misc,17214.7,Incoming
+00153,2020-08-21,Transfer,Misc,2606.01,Incoming
+00154,2020-08-21,Reversal,Misc,375868.24,Outgoing
+00155,2020-08-21,Interest,Misc,313223.53,Outgoing
+00156,2020-08-21,Debit Card,Misc,6936.91,Incoming
+00157,2020-08-21,RTGS,Misc,524351.52,Outgoing
+00158,2020-08-21,Tax,Bills,30539.44,Incoming
+00159,2020-08-21,Purchase,Shopping,134905.31,Outgoing
+00160,2020-08-21,ATM,Misc,314779.06,Outgoing
+00161,2020-08-21,Tax,Bills,32.4,Incoming
+00162,2020-08-21,Purchase,Shopping,33.0,Incoming
+00163,2020-08-21,Miscellaneous,Misc,419.28,Incoming
+00164,2020-08-21,Purchase,Shopping,8080.75,Incoming
+00165,2020-08-21,Debit Card,Misc,1595.7,Incoming
+00166,2020-08-21,RTGS,Misc,106619.87,Outgoing
+00167,2020-08-21,Cheque,Misc,88849.9,Outgoing
+00168,2020-08-21,Bill,Bills,150643.38,Incoming
+00169,2020-08-21,ATM,Misc,66099.21,Outgoing
+00170,2020-08-21,Miscellaneous,Misc,58754.85,Outgoing
+00171,2020-08-21,Bill,Bills,94007.76,Outgoing
+00172,2020-08-21,ATM,Misc,188015.52,Outgoing
+00173,2020-08-21,Cheque,Misc,127.7,Incoming
+00174,2020-08-21,IMPS,Misc,59.55,Incoming
+00175,2020-08-21,Commission,Misc,31208.11,Incoming
+00176,2020-08-21,Interest,Misc,21941.09,Outgoing
+00177,2020-08-21,Tax,Bills,32911.63,Outgoing
+00178,2020-08-21,RTGS,Misc,710146.5,Incoming
+00179,2020-08-21,Cash,Misc,433.9,Incoming
+00180,2020-08-21,Reversal,Misc,437569.28,Outgoing
+00181,2020-08-21,Commission,Misc,20.5,Incoming
+00182,2020-08-21,Debit Card,Misc,335.0,Incoming
+00183,2020-08-21,Miscellaneous,Misc,437924.78,Outgoing
+00184,2020-08-21,Reversal,Misc,101.1,Incoming
+00185,2020-08-21,Cheque,Misc,183171.0,Incoming
+00186,2020-08-21,Interest,Misc,91636.05,Outgoing
+00187,2020-08-21,IMPS,Misc,13090.86,Outgoing
+00188,2020-08-21,Cash,Misc,2834.5,Incoming
+00189,2020-08-21,Transfer,Misc,20344.92,Outgoing
+00190,2020-08-21,IMPS,Misc,125302.4,Incoming
+00191,2020-08-21,Debit Card,Misc,252.05,Incoming
+00192,2020-08-21,Tax,Bills,46647.31,Outgoing
+00193,2020-08-21,Reversal,Misc,23323.65,Outgoing
+00194,2020-08-21,Tax,Bills,14577.28,Outgoing
+00195,2020-08-21,Purchase,Shopping,51020.5,Outgoing
+00196,2020-08-21,Debit Card,Misc,2.78,Incoming
+00197,2020-08-21,Commission,Misc,300660.0,Incoming
+00198,2020-08-21,IMPS,Misc,87920.82,Outgoing
+00199,2020-08-21,ATM,Misc,26376.25,Outgoing
+00200,2020-08-21,Transfer,Misc,193326.38,Incoming
+00201,2026-09-01 08:15:00,NTUC FairPrice,Groceries,45.8,Outgoing
+00202,2026-09-01 12:30:00,Kopitiam,Food,8.5,Outgoing
+00203,2026-09-02 09:00:00,Salary Credit,Misc,2850.0,Incoming
+00204,2026-09-02 18:45:00,Grab,Transport,16.2,Outgoing
+00205,2026-09-03 14:20:00,Shopee,Shopping,32.9,Outgoing
+00206,2026-09-03 20:10:00,Golden Village,Entertainment,28.0,Outgoing
+00207,2026-09-04 10:05:00,ATM Withdrawal,Misc,100.0,Outgoing
+00208,2026-09-04 19:30:00,McDonald's,Food,12.6,Outgoing
+00209,2026-09-05 11:15:00,Decathlon,Shopping,59.9,Outgoing
+00210,2026-09-05 16:40:00,Starbucks,Food,9.8,Outgoing
+00211,2026-09-06 09:25:00,PayNow Transfer,Misc,200.0,Incoming
+00212,2026-09-06 13:10:00,Toast Box,Food,7.2,Outgoing
+00213,2026-09-07 08:50:00,SimplyGo,Transport,2.1,Outgoing
+00214,2026-09-07 21:05:00,Netflix,Entertainment,19.98,Outgoing
+00215,2026-09-08 15:30:00,Guardian,Shopping,24.5,Outgoing
+00216,2026-09-09 18:20:00,Cold Storage,Groceries,67.35,Outgoing
+00217,2026-09-10 12:05:00,Foodpanda,Food,21.4,Outgoing
+00218,2026-09-11 09:40:00,ATM Withdrawal,Misc,150.0,Outgoing
+00219,2026-09-11 20:15:00,Shaw Theatres,Entertainment,24.0,Outgoing
+00220,2026-09-12 10:30:00,Uniqlo,Shopping,49.9,Outgoing
+00221,2026-09-13 14:45:00,NTUC FairPrice,Groceries,36.25,Outgoing
+00222,2026-09-14 17:55:00,Grab,Transport,13.8,Outgoing
+00223,2026-09-15 09:10:00,Bank Transfer,Misc,500.0,Incoming
+00224,2026-09-15 19:25:00,Pizza Hut,Food,31.9,Outgoing
+00225,2026-09-16 16:10:00,Apple,Shopping,14.98,Outgoing
+00226,2026-09-17 08:35:00,SimplyGo,Transport,1.9,Outgoing
+00227,2026-09-18 21:30:00,Spotify,Entertainment,11.98,Outgoing
+00228,2026-09-19 13:25:00,IKEA,Shopping,78.9,Outgoing
+00229,2026-09-20 11:50:00,Kopitiam,Food,6.8,Outgoing
+00230,2026-09-21 18:00:00,PayNow Transfer,Misc,120.0,Incoming
