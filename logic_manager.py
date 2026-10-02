@@ -9,7 +9,16 @@
 
 
 #Irregular Income Flag	Income Variance > 20% month-to-month	Part-timers with fluctuating cash flow	Advice on flexible budgeting/financial buffers.
-
+#<Focus>
+currentMMYYYY = #HOW TO GET current month and year
+prev1MMYYYY = 
+prev2MMYYYY = 
+#call data that has inflow flag
+#for MMYYYY in 3MMYYYY:
+  #for day in MMYYYY
+    if TransactionType.lower() == 'inflow' 
+      getIncome =+ TransactionAmount
+    #WIP
 
 #Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
 
