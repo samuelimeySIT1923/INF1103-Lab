@@ -274,3 +274,54 @@ with tab2:
                 st.error(
                     "Please enter valid numerical amounts for Current Balance and Monthly Income."
                 )
+
+MAX_FILE_SIZE_MB = 10
+
+def validate_uploaded_files(uploaded_files: List[Any]) -> tuple[List[Any], List[str]]:
+    """Separates valid files from rejected ones based on size and content."""
+    valid_files = []
+    errors = []
+
+    for file in uploaded_files:
+        # Check size of file
+        if file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+            errors.append(f" '{file.name}' rejected: Exceeds {MAX_FILE_SIZE_MB}MB size limit.")
+        elif file.size == 0:
+            errors.append(f" '{file.name}' rejected: File is empty.")
+        else:
+            valid_files.append(file)
+
+    return valid_files, errors
+
+
+with st.expander("➕ Manually Add / Correct a Transaction"):
+    with st.form("manual_entry_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            entry_date = st.date_input("Transaction Date")
+            entry_type = st.selectbox("Type", ["Outgoing", "Incoming"])
+            entry_cat = st.text_input("Category", value="General")
+        with col2:
+            entry_amount = st.number_input("Amount (S$)", min_value=0.01, step=1.0, format="%.2f")
+            entry_desc = st.text_input("Description / ID Prefix", value="Manual")
+
+        submit_manual = st.form_submit_button("Save Record")
+
+    if submit_manual:
+        # Build manual dictionary record
+        manual_record = {
+            "transaction_id": f"manual_{int(pd.Timestamp.now().timestamp())}",
+            "date_and_time": f"{entry_date} 00:00:00",
+            "transaction_type": entry_type,
+            "transaction_amount": entry_amount,
+            "category": entry_cat
+        }
+        
+        # Validate using our pure function
+        is_valid, cleaned_rec, err_msg = validate_and_clean_record(manual_record)
+        if is_valid:
+            df = save_collated_data([cleaned_rec])
+            st.success("Transaction manually recorded!")
+            st.rerun()
+        else:
+            st.error(f"Failed to add record: {err_msg}")
