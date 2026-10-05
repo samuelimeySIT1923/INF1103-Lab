@@ -229,3 +229,63 @@ transaction_id,date_and_time,retailer,category,transaction_amount,transaction_ty
 00228,2026-09-19 13:25:00,IKEA,Shopping,78.9,Outgoing
 00229,2026-09-20 11:50:00,Kopitiam,Food,6.8,Outgoing
 00230,2026-09-21 18:00:00,PayNow Transfer,Misc,120.0,Incoming
+00231,2026-09-01 08:15:00,NTUC FairPrice,Groceries,45.8,Outgoing
+00232,2026-09-01 12:30:00,Kopitiam,Food,8.5,Outgoing
+00233,2026-09-02 09:00:00,Salary Credit,Misc,2850.0,Incoming
+00234,2026-09-02 18:45:00,Grab,Transport,16.2,Outgoing
+00235,2026-09-03 14:20:00,Shopee,Shopping,32.9,Outgoing
+00236,2026-09-03 20:10:00,Golden Village,Entertainment,28.0,Outgoing
+00237,2026-09-04 10:05:00,ATM Withdrawal,Misc,100.0,Outgoing
+00238,2026-09-04 19:30:00,McDonald's,Food,12.6,Outgoing
+00239,2026-09-05 11:15:00,Decathlon,Shopping,59.9,Outgoing
+00240,2026-09-05 16:40:00,Starbucks,Food,9.8,Outgoing
+00241,2026-09-06 09:25:00,PayNow Transfer,Misc,200.0,Incoming
+00242,2026-09-06 13:10:00,Toast Box,Food,7.2,Outgoing
+00243,2026-09-07 08:50:00,SimplyGo,Transport,2.1,Outgoing
+00244,2026-09-07 21:05:00,Netflix,Entertainment,19.98,Outgoing
+00245,2026-09-08 15:30:00,Guardian,Shopping,24.5,Outgoing
+00246,2026-09-09 18:20:00,Cold Storage,Groceries,67.35,Outgoing
+00247,2026-09-10 12:05:00,Foodpanda,Food,21.4,Outgoing
+00248,2026-09-11 09:40:00,ATM Withdrawal,Misc,150.0,Outgoing
+00249,2026-09-11 20:15:00,Shaw Theatres,Entertainment,24.0,Outgoing
+00250,2026-09-12 10:30:00,Uniqlo,Shopping,49.9,Outgoing
+00251,2026-09-13 14:45:00,NTUC FairPrice,Groceries,36.25,Outgoing
+00252,2026-09-14 17:55:00,Grab,Transport,13.8,Outgoing
+00253,2026-09-15 09:10:00,Bank Transfer,Misc,500.0,Incoming
+00254,2026-09-15 19:25:00,Pizza Hut,Food,31.9,Outgoing
+00255,2026-09-16 16:10:00,Apple,Shopping,14.98,Outgoing
+00256,2026-09-17 08:35:00,SimplyGo,Transport,1.9,Outgoing
+00257,2026-09-18 21:30:00,Spotify,Entertainment,11.98,Outgoing
+00258,2026-09-19 13:25:00,IKEA,Shopping,78.9,Outgoing
+00259,2026-09-20 11:50:00,Kopitiam,Food,6.8,Outgoing
+00260,2026-09-21 18:00:00,PayNow Transfer,Misc,120.0,Incoming
+00261,2026-09-01 08:15:00,NTUC FairPrice,Groceries,45.8,Outgoing
+00262,2026-09-01 12:30:00,Kopitiam,Food,8.5,Outgoing
+00263,2026-09-02 09:00:00,Salary Credit,Misc,2850.0,Incoming
+00264,2026-09-02 18:45:00,Grab,Transport,16.2,Outgoing
+00265,2026-09-03 14:20:00,Shopee,Shopping,32.9,Outgoing
+00266,2026-09-03 20:10:00,Golden Village,Entertainment,28.0,Outgoing
+00267,2026-09-04 10:05:00,ATM Withdrawal,Misc,100.0,Outgoing
+00268,2026-09-04 19:30:00,McDonald's,Food,12.6,Outgoing
+00269,2026-09-05 11:15:00,Decathlon,Shopping,59.9,Outgoing
+00270,2026-09-05 16:40:00,Starbucks,Food,9.8,Outgoing
+00271,2026-09-06 09:25:00,PayNow Transfer,Misc,200.0,Incoming
+00272,2026-09-06 13:10:00,Toast Box,Food,7.2,Outgoing
+00273,2026-09-07 08:50:00,SimplyGo,Transport,2.1,Outgoing
+00274,2026-09-07 21:05:00,Netflix,Entertainment,19.98,Outgoing
+00275,2026-09-08 15:30:00,Guardian,Shopping,24.5,Outgoing
+00276,2026-09-09 18:20:00,Cold Storage,Groceries,67.35,Outgoing
+00277,2026-09-10 12:05:00,Foodpanda,Food,21.4,Outgoing
+00278,2026-09-11 09:40:00,ATM Withdrawal,Misc,150.0,Outgoing
+00279,2026-09-11 20:15:00,Shaw Theatres,Entertainment,24.0,Outgoing
+00280,2026-09-12 10:30:00,Uniqlo,Shopping,49.9,Outgoing
+00281,2026-09-13 14:45:00,NTUC FairPrice,Groceries,36.25,Outgoing
+00282,2026-09-14 17:55:00,Grab,Transport,13.8,Outgoing
+00283,2026-09-15 09:10:00,Bank Transfer,Misc,500.0,Incoming
+00284,2026-09-15 19:25:00,Pizza Hut,Food,31.9,Outgoing
+00285,2026-09-16 16:10:00,Apple,Shopping,14.98,Outgoing
+00286,2026-09-17 08:35:00,SimplyGo,Transport,1.9,Outgoing
+00287,2026-09-18 21:30:00,Spotify,Entertainment,11.98,Outgoing
+00288,2026-09-19 13:25:00,IKEA,Shopping,78.9,Outgoing
+00289,2026-09-20 11:50:00,Kopitiam,Food,6.8,Outgoing
+00290,2026-09-21 18:00:00,PayNow Transfer,Misc,120.0,Incoming

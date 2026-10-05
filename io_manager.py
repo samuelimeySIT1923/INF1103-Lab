@@ -14,6 +14,62 @@ from ai_manager import extract_batch_standardized_transactions
 from data_manager import columns, fallback_id_prefix, load_collated_data, save_collated_data
 
 
+MAX_FILE_SIZE_MB = 10
+
+def validate_uploaded_files(uploaded_files: List[Any]) -> tuple[List[Any], List[str]]:
+    """Separates valid files from rejected ones based on size and content."""
+    valid_files = []
+    errors = []
+
+    for file in uploaded_files:
+        # Check size of file
+        if file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+            errors.append(f" '{file.name}' rejected: Exceeds {MAX_FILE_SIZE_MB}MB size limit.")
+        elif file.size == 0:
+            errors.append(f" '{file.name}' rejected: File is empty.")
+        else:
+            valid_files.append(file)
+
+    return valid_files, errors
+
+
+def validate_and_clean_record(record: Dict[str, Any]) -> Tuple[bool, Dict[str, Any], str]:
+    """Validates a raw transaction dictionary against required constraints without using classes."""
+    # 1. Check required keys
+    for key in REQUIRED_KEYS:
+        if key not in record or record[key] is None or str(record[key]).strip() == "":
+            return False, record, f"Missing or empty required field: '{key}'"
+
+    # 2. Check transaction type enum
+    tx_type = str(record["transaction_type"]).capitalize().strip()
+    if tx_type not in ["Incoming", "Outgoing"]:
+        return False, record, f"Invalid transaction type '{record['transaction_type']}' (must be 'Incoming' or 'Outgoing')"
+
+    # 3. Validate transaction amount
+    try:
+        amount = float(record["transaction_amount"])
+        if amount <= 0:
+            return False, record, f"Amount must be greater than zero (got {amount})"
+    except (ValueError, TypeError):
+        return False, record, f"Amount '{record['transaction_amount']}' is not a valid number"
+
+    # 4. Validate date format
+    try:
+        parsed_date = pd.to_datetime(record["date_and_time"])
+        formatted_date = parsed_date.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return False, record, f"Invalid date/time format: '{record['date_and_time']}'"
+
+    # Cleaned record dictionary
+    cleaned = {
+        "transaction_id": str(record["transaction_id"]).strip(),
+        "date_and_time": formatted_date,
+        "transaction_type": tx_type,
+        "transaction_amount": amount,
+        "category": str(record["category"]).strip().title()
+    }
+    return True, cleaned, ""
+
 #-----------------------------------------------------------------------------------#
 #Establish file parsing function for uploaded files
 
@@ -275,23 +331,6 @@ with tab2:
                     "Please enter valid numerical amounts for Current Balance and Monthly Income."
                 )
 
-MAX_FILE_SIZE_MB = 10
-
-def validate_uploaded_files(uploaded_files: List[Any]) -> tuple[List[Any], List[str]]:
-    """Separates valid files from rejected ones based on size and content."""
-    valid_files = []
-    errors = []
-
-    for file in uploaded_files:
-        # Check size of file
-        if file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
-            errors.append(f" '{file.name}' rejected: Exceeds {MAX_FILE_SIZE_MB}MB size limit.")
-        elif file.size == 0:
-            errors.append(f" '{file.name}' rejected: File is empty.")
-        else:
-            valid_files.append(file)
-
-    return valid_files, errors
 
 
 with st.expander("➕ Manually Add / Correct a Transaction"):
