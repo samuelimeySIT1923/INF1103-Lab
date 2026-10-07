@@ -10,7 +10,7 @@ import plotly.express as px
 import pypdf
 import streamlit as st
 
-from ai_manager import extract_batch_standardized_transactions
+from ai_manager import  extract_batch_standardized_transactions, allowed_categories
 
 
 #-----------------------------------------------------------------------------------#
@@ -312,11 +312,29 @@ with tab2:
 # -------------------------------------------------------------------------------#
     # Manual Transaction Management (Add / Amend / Delete)
 
-    with st.expander("🛠️ Add, Edit, or Delete Transactions"):
+    all_known_categories = sorted(list(set(allowed_categories + df["category"].dropna().astype(str).tolist())))
+
+    with st.expander(" Add, Edit, or Delete Transactions"):
         action = st.radio("Choose Action:", ["➕ Add New Transaction", "✏️ Edit / Delete Existing Transaction"], horizontal=True)
 
         if action == "➕ Add New Transaction":
-            with st.form("add_transaction_form", clear_on_submit=True):
+            col_cat1, col_cat2 = st.columns(2)
+            with col_cat1:
+                selected_add_cat = st.selectbox(
+                    "Category", 
+                    options=all_known_categories + ["+ Custom Category..."],
+                    key="add_cat_select"
+                )
+            with col_cat2:
+                custom_cat_input = ""
+                if selected_add_cat == "+ Custom Category...":
+                    custom_cat_input = st.text_input(
+                        "Enter Custom Category Name:", 
+                        placeholder="e.g. Subscriptions",
+                        key="add_custom_cat_input"
+                    )
+
+            with st.form("add_transaction_form"):
                 col1, col2 = st.columns(2)
                 with col1:
                     add_date = st.date_input("Date")
@@ -324,16 +342,21 @@ with tab2:
                     add_retailer = st.text_input("Retailer", value="General Merchant")
                 with col2:
                     add_amount = st.number_input("Amount (S$)", min_value=0.01, step=1.0, format="%.2f")
-                    add_category = st.text_input("Category", value="General")
 
                 submit_add = st.form_submit_button("Save Transaction")
 
             if submit_add:
+                if selected_add_cat == "+ Custom Category...":
+                    cat_value = custom_cat_input.strip()
+                    final_add_cat = cat_value.title() if cat_value else "Misc"
+                else:
+                    final_add_cat = selected_add_cat
+
                 new_rec = {
                     "transaction_id": "",
                     "date_and_time": f"{add_date} 00:00:00",
                     "retailer": add_retailer.strip(),
-                    "category": add_category.strip().title(),
+                    "category": final_add_cat,
                     "transaction_amount": float(add_amount),
                     "transaction_type": add_type,
                 }
@@ -351,50 +374,101 @@ with tab2:
                 )
 
                 selected_row = df[df["transaction_id"] == selected_id].iloc[0]
+                current_cat = str(selected_row["category"]).strip().title()
 
-                with st.form("edit_transaction_form"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        edit_date_val = pd.to_datetime(selected_row["date_and_time"]).date()
-                        edit_date = st.date_input("Date", value=edit_date_val)
-                        edit_type = st.selectbox(
-                            "Type",
-                            ["Outgoing", "Incoming"],
-                            index=0 if selected_row["transaction_type"] == "Outgoing" else 1
-                        )
-                        edit_retailer = st.text_input("Retailer", value=str(selected_row["retailer"]))
-                    with col2:
-                        edit_amount = st.number_input(
-                            "Amount (S$)",
-                            min_value=0.01,
-                            value=float(selected_row["transaction_amount"]),
-                            step=1.0,
-                            format="%.2f"
-                        )
-                        edit_category = st.text_input("Category", value=str(selected_row["category"]))
+                if current_cat in allowed_categories:
+                    default_cat_index = allowed_categories.index(current_cat)
+                else:
+                    default_cat_index = len(allowed_categories)  # Point to "+ Add New Custom Category..."
 
-                    col_save, col_delete = st.columns([1, 1])
-                    with col_save:
-                        submit_edit = st.form_submit_button("Update Transaction")
-                    with col_delete:
-                        submit_delete = st.form_submit_button("Delete Transaction")
+        
+                cat_col1, cat_col2 = st.columns(2)
+                with cat_col1:
+                    selected_cat_option = st.selectbox(
+                        "Category",
+                        options=allowed_categories + ["+ Add New Custom Category..."],
+                        index=default_cat_index,
+                        key=f"edit_cat_select_{selected_id}"
+                    )
 
-                if submit_edit:
-                    df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
-                    df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
-                    df.loc[df["transaction_id"] == selected_id, "category"] = edit_category.strip().title()
-                    df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
-                    df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+                custom_cat_val = ""
+                is_custom = selected_cat_option == "+ Add New Custom Category..."
+                confirm_new_cat = False
 
-                    df = update_collated_data(df)
-                    st.success(f"Transaction {selected_id} successfully updated!")
-                    st.rerun()
+                with cat_col2:
+                    if is_custom:
+                        default_custom_text = current_cat if current_cat not in allowed_categories else ""
+                        custom_cat_val = st.text_input(
+                            "Enter New Custom Category:",
+                            value=default_custom_text,
+                            key=f"edit_custom_input_{selected_id}"
+                        ).strip().title()
 
-                if submit_delete:
-                    df = df[df["transaction_id"] != selected_id].copy()
-                    df = update_collated_data(df)
-                    st.success(f"Transaction {selected_id} deleted!")
-                    st.rerun()
+                        if custom_cat_val:
+                            st.warning(f"⚠️ **'{custom_cat_val}'** is not in the registered list.")
+                            confirm_new_cat = st.checkbox(
+                                f"Confirm adding '{custom_cat_val}' as a new category",
+                                key=f"confirm_cat_{selected_id}"
+                            )
+
+                        with st.form("edit_transaction_form"):
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                edit_date_val = pd.to_datetime(selected_row["date_and_time"]).date()
+                                edit_date = st.date_input("Date", value=edit_date_val)
+                                edit_type = st.selectbox(
+                                    "Type",
+                                    ["Outgoing", "Incoming"],
+                                    index=0 if selected_row["transaction_type"] == "Outgoing" else 1
+                                )
+                                edit_retailer = st.text_input("Retailer", value=str(selected_row["retailer"]))
+                            with col2:
+                                edit_amount = st.number_input(
+                                    "Amount (S$)",
+                                    min_value=0.01,
+                                    value=float(selected_row["transaction_amount"]),
+                                    step=1.0,
+                                    format="%.2f"
+                                )
+                            col_save, col_delete = st.columns([1, 1])
+                            with col_save:
+                                submit_edit = st.form_submit_button("Update Transaction")
+                            with col_delete:
+                                submit_delete = st.form_submit_button("Delete Transaction")
+
+                        if submit_edit:
+                            # Determine final category logic
+                            if is_custom:
+                                if not custom_cat_val:
+                                    st.error("❌ Please provide a name for the custom category.")
+                                    st.stop()
+                                elif custom_cat_val not in allowed_categories and not confirm_new_cat:
+                                    st.error(
+                                        f"❌ Update blocked: **'{custom_cat_val}'** is not a registered category. "
+                                        "Please check the confirmation box above to proceed with adding it as a new custom category."
+                                    )
+                                    st.stop()
+                                else:
+                                    final_cat = custom_cat_val
+                            else:
+                                final_cat = selected_cat_option
+
+                            # Save updates
+                            df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
+                            df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
+                            df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
+                            df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
+                            df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+
+                            df = update_collated_data(df)
+                            st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
+                            st.rerun()
+
+                        if submit_delete:
+                            df = df[df["transaction_id"] != selected_id].copy()
+                            df = update_collated_data(df)
+                            st.success(f"Transaction {selected_id} deleted!")
+                            st.rerun()
 
     st.title("Recommendation")
 
