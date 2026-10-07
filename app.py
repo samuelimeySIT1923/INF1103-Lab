@@ -133,6 +133,12 @@ def save_collated_data(new_records: List[Dict[str, Any]]) -> pd.DataFrame:
     combined_df.to_csv(data_path, index=False)
     return combined_df
 
+def update_collated_data(updated_df: pd.DataFrame) -> pd.DataFrame:
+    """Overwrite data file with modified DataFrame while ensuring sequential IDs."""
+    updated_df = updated_df[columns].copy()
+    updated_df = assign_sequential_ids(updated_df)
+    updated_df.to_csv(data_path, index=False)
+    return updated_df
 
 #-----------------------------------------------------------------------------------#
 #Establish Streamlit page configuration and API key handling
@@ -302,6 +308,94 @@ with tab2:
                 st.info("No expense data available to calculate cumulative spending.")
 
     st.divider()
+
+# -------------------------------------------------------------------------------#
+    # Manual Transaction Management (Add / Amend / Delete)
+
+    with st.expander("🛠️ Add, Edit, or Delete Transactions"):
+        action = st.radio("Choose Action:", ["➕ Add New Transaction", "✏️ Edit / Delete Existing Transaction"], horizontal=True)
+
+        if action == "➕ Add New Transaction":
+            with st.form("add_transaction_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    add_date = st.date_input("Date")
+                    add_type = st.selectbox("Type", ["Outgoing", "Incoming"])
+                    add_retailer = st.text_input("Retailer", value="General Merchant")
+                with col2:
+                    add_amount = st.number_input("Amount (S$)", min_value=0.01, step=1.0, format="%.2f")
+                    add_category = st.text_input("Category", value="General")
+
+                submit_add = st.form_submit_button("Save Transaction")
+
+            if submit_add:
+                new_rec = {
+                    "transaction_id": "",
+                    "date_and_time": f"{add_date} 00:00:00",
+                    "retailer": add_retailer.strip(),
+                    "category": add_category.strip().title(),
+                    "transaction_amount": float(add_amount),
+                    "transaction_type": add_type,
+                }
+                df = save_collated_data([new_rec])
+                st.success("New transaction successfully recorded!")
+                st.rerun()
+
+        elif action == "✏️ Edit / Delete Existing Transaction":
+            if df.empty:
+                st.info("No records available to edit.")
+            else:
+                selected_id = st.selectbox(
+                    "Select Transaction ID to Modify:",
+                    options=df["transaction_id"].tolist()
+                )
+
+                selected_row = df[df["transaction_id"] == selected_id].iloc[0]
+
+                with st.form("edit_transaction_form"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        edit_date_val = pd.to_datetime(selected_row["date_and_time"]).date()
+                        edit_date = st.date_input("Date", value=edit_date_val)
+                        edit_type = st.selectbox(
+                            "Type",
+                            ["Outgoing", "Incoming"],
+                            index=0 if selected_row["transaction_type"] == "Outgoing" else 1
+                        )
+                        edit_retailer = st.text_input("Retailer", value=str(selected_row["retailer"]))
+                    with col2:
+                        edit_amount = st.number_input(
+                            "Amount (S$)",
+                            min_value=0.01,
+                            value=float(selected_row["transaction_amount"]),
+                            step=1.0,
+                            format="%.2f"
+                        )
+                        edit_category = st.text_input("Category", value=str(selected_row["category"]))
+
+                    col_save, col_delete = st.columns([1, 1])
+                    with col_save:
+                        submit_edit = st.form_submit_button("Update Transaction")
+                    with col_delete:
+                        submit_delete = st.form_submit_button("Delete Transaction")
+
+                if submit_edit:
+                    df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
+                    df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
+                    df.loc[df["transaction_id"] == selected_id, "category"] = edit_category.strip().title()
+                    df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
+                    df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+
+                    df = update_collated_data(df)
+                    st.success(f"Transaction {selected_id} successfully updated!")
+                    st.rerun()
+
+                if submit_delete:
+                    df = df[df["transaction_id"] != selected_id].copy()
+                    df = update_collated_data(df)
+                    st.success(f"Transaction {selected_id} deleted!")
+                    st.rerun()
+
     st.title("Recommendation")
 
     with st.form("Recommend"):
