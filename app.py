@@ -478,7 +478,7 @@ with tab2:
                         old_transaction = selected_row.to_dict()
                         record_audit(
                             transaction_id=selected_id,
-                            action="DELETE",
+                            action="ARCHIVE",
                             old_data=old_transaction,
                         )
 
@@ -488,6 +488,17 @@ with tab2:
 
                         st.success(f"Transaction {selected_id} archived!")
                         st.rerun()
+
+# Displaying the Audit trail from csv
+    st.subheader("Audit Trail")
+
+    audit_path = Path("data/audit_trail.csv")
+
+    if audit_path.exists():
+        audit_df = pd.read_csv(audit_path)
+        st.dataframe(audit_df, hide_index=True)
+    else:
+        st.info("No audit records yet.")
 
     st.title("Recommendation")
 
