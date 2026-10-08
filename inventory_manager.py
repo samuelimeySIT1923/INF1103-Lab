@@ -3,11 +3,14 @@ import os
 from datetime import datetime
  
 FILENAME = "inventory.json"
-  
+  #3. Data Persistence:  
+
+
 #1 Persistence
 #1a find json file and load it if it exists, otherwise start with an empty inventory.
 def load_inventory():
     """Load data from inventory.json if it exists, otherwise start empty."""
+    #<3i> Check whether inventory.json exists. Create load_inventory() to load inventory.json if it exists.
     if os.path.exists(FILENAME):
         try:
             #read file and load data
@@ -22,9 +25,11 @@ def load_inventory():
     else:
         print(f"{FILENAME} not found. Starting with empty inventory.")
         #empty inventory and transaction history
+    # <3ii> Otherwise, begin with an empty inventory.
     return [], []
  
  #1b Save the inventory and transaction history to inventory.json
+ #<3iii> Create save_inventory() and save data to inventory.json.
 def save_inventory(inventory, transactions):
     """Save products and the full transaction history to inventory.json."""
     #writes file, will override
@@ -69,38 +74,41 @@ def read_number(prompt, cast, minimum=0):
             print("Invalid input. Please enter a number.")
  
  
-# 3 Core functions
+# 3 Core functions - inventory: 
+# #<2> Data Manipulation:  Maintain your functional design. ,
 #3a Display all products in inventory
+#<2iv> display_all()
 def display_all(inventory):
     print("\nCurrent Inventory")
-    print("-" * 48)
-    if not inventory:
+    print("-" * 48) #48 dashes printed for formatting
+    if not inventory: #nothing in inventory
         print("No products in inventory.")
-    for p in inventory:
+# <1> Represent inventory items using dictionaries and store at least three products in a list. 
+    for p in inventory: #loop for each product in inventory and print details
         print(f"ID: {p['id']} | Name: {p['name']} | "
               f"Price: ${p['price']:.2f} | Stock: {p['stock']}")
-    print("-" * 48)
+    print("-" * 48) #48 dashes printed for formatting
  
- 
+ #3b Add a new product <2i> add_product()
 def add_product(inventory, transactions):
     print("\nAdd New Product")
-    product_id = input("Product ID: ").strip()
-    if not product_id:
+    product_id = input("Product ID: ").strip() #remove white spaces from input
+    if not product_id: #ERROR handling: no blank id
         print("Product ID cannot be empty.")
         return
-    if find_product(inventory, product_id):
+    if find_product(inventory, product_id): #ERROR handling: no same id
         print("Product ID already exists.")
         return
-    name = input("Product Name: ").strip()
-    price = read_number("Price: ", float)
-    stock = read_number("Stock Quantity: ", int)
- 
+    name = input("Product Name: ").strip() #remove white spaces from input
+    price = read_number("Price: ", float) #price in float, accept decimal (Cents)
+    stock = read_number("Stock Quantity: ", int) #stock in int, whole number only
+ #add on in list
     inventory.append({"id": product_id, "name": name,
                       "price": price, "stock": stock})
     record_transaction(transactions, product_id, stock, "add")
     print("Product added successfully!")
  
- 
+  #3c Add a new product <2ii>  update_stock()
 def update_stock(inventory, transactions):
     print("\nUpdate Stock")
     product = find_product(inventory, input("Enter Product ID: ").strip())
@@ -117,7 +125,7 @@ def update_stock(inventory, transactions):
     record_transaction(transactions, product["id"], change, "update")
     print("Stock updated successfully!")
  
- 
+  #3d Add a new product <2iii> search_product()
 def search_product(inventory):
     print("\nSearch Product")
     product = find_product(inventory, input("Enter Product ID: ").strip())
@@ -132,8 +140,8 @@ def search_product(inventory):
     print(f"Stock: {product['stock']}")
     print("-" * 48)
 
-# Menu
-# ---------------------------------------------------------------
+#4 Menu System <4> Build a Menu System:  Create menu options for Display, Add, Update, Search, Save and Exit.
+#4a Show menu options
 def show_menu():
     print("\n----------- MENU -----------")
     print("1. Display All Products")
@@ -144,14 +152,13 @@ def show_menu():
     print("6. Exit")
     print("-----------------------------")
  
- 
+ #4b Main startup screen
 def main():
-    print("SIT Internal")
-    print("=" * 40)
+    print("=" * 40) #40 equal sign
     print("INVENTORY MANAGEMENT SYSTEM")
-    print("=" * 40)
+    print("=" * 40) #40 equal sign
     inventory, transactions = load_inventory()
- 
+ #accept input 1-6
     while True:
         show_menu()
         choice = input("Enter option: ").strip()
@@ -173,51 +180,9 @@ def main():
             print("Program terminated.")
             break
         else:
+            #ERROR handling: invalid input beyond 1-6
             print("Invalid option. Please choose 1-6.")
  
- 
+ #Guard to ensure program launches directly when run as a script, not when imported as a module.
 if __name__ == "__main__":
     main()
-
-
-
-
-#The store manager needs a system that remembers inventory levels even after the 
-#program closes. Furthermore, they need to store a history of all transaction amounts, 
-#not just the running total. 
-#Requirements 
-#1. Data Representation: 
-#Represent inventory items using dictionaries and store at least three products in a 
-#list.  
-
-
-
-
-
-
-#2. Data Manipulation: 
-#Maintain your functional design. Create add_product(), update_stock(), 
-#search_product() and display_all() fuctions in inventory dictionary.  
-
-#add_product()
-
-#update_stock()
-
-#search_product()
-
-#display_all()
-
-#3. Data Persistence:  
-#Check whether inventory.json exists. Create load_inventory() to load 
-#inventory.json if it exists. Otherwise, begin with an empty inventory. Create 
-#save_inventory() and save data to inventory.json.  
-#4. Build a Menu System: 
-#Create menu options for Display, Add, Update, Search, Save and Exit.
-
-# Initialize Your Workspace & Git 
-#1. Initialize and track your work. 
-#2. Commit your progress after you successfully complete each phase: 
-#a. After creating the Dictionary and adding few products 
-#b. After load_inventory() is working. 
-#c. After the final save_inventory() is verified. 
-#3. Finally push the code to your github repository. 
