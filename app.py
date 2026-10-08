@@ -11,7 +11,7 @@ import pypdf
 import streamlit as st
 
 from ai_manager import  extract_batch_standardized_transactions, allowed_categories
-
+from data_manager import record_audit
 
 #-----------------------------------------------------------------------------------#
 #Establish columns and data path for collated data
@@ -314,8 +314,8 @@ with tab2:
 
     all_known_categories = sorted(list(set(allowed_categories + df["category"].dropna().astype(str).tolist())))
 
-    with st.expander(" Add, Edit, or Delete Transactions"):
-        action = st.radio("Choose Action:", ["➕ Add New Transaction", "✏️ Edit / Delete Existing Transaction"], horizontal=True)
+    with st.expander(" Add, Edit, or Archive Transactions"):
+        action = st.radio("Choose Action:", ["➕ Add New Transaction", "✏️ Edit / Archive Existing Transaction"], horizontal=True)
 
         if action == "➕ Add New Transaction":
             col_cat1, col_cat2 = st.columns(2)
@@ -364,7 +364,7 @@ with tab2:
                 st.success("New transaction successfully recorded!")
                 st.rerun()
 
-        elif action == "✏️ Edit / Delete Existing Transaction":
+        elif action == "✏️ Edit / Archive Existing Transaction":
             if df.empty:
                 st.info("No records available to edit.")
             else:
@@ -374,6 +374,7 @@ with tab2:
                 )
 
                 selected_row = df[df["transaction_id"] == selected_id].iloc[0]
+                old_transaction = selected_row.to_dict()
                 current_cat = str(selected_row["category"]).strip().title()
 
                 if current_cat in allowed_categories:
@@ -411,64 +412,82 @@ with tab2:
                                 key=f"confirm_cat_{selected_id}"
                             )
 
-                        with st.form("edit_transaction_form"):
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                edit_date_val = pd.to_datetime(selected_row["date_and_time"]).date()
-                                edit_date = st.date_input("Date", value=edit_date_val)
-                                edit_type = st.selectbox(
-                                    "Type",
-                                    ["Outgoing", "Incoming"],
-                                    index=0 if selected_row["transaction_type"] == "Outgoing" else 1
-                                )
-                                edit_retailer = st.text_input("Retailer", value=str(selected_row["retailer"]))
-                            with col2:
-                                edit_amount = st.number_input(
-                                    "Amount (S$)",
-                                    min_value=0.01,
-                                    value=float(selected_row["transaction_amount"]),
-                                    step=1.0,
-                                    format="%.2f"
-                                )
-                            col_save, col_delete = st.columns([1, 1])
-                            with col_save:
-                                submit_edit = st.form_submit_button("Update Transaction")
-                            with col_delete:
-                                submit_delete = st.form_submit_button("Delete Transaction")
+                    with st.form("edit_transaction_form"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            edit_date_val = pd.to_datetime(selected_row["date_and_time"]).date()
+                            edit_date = st.date_input("Date", value=edit_date_val)
+                            edit_type = st.selectbox(
+                                "Type",
+                                ["Outgoing", "Incoming"],
+                                index=0 if selected_row["transaction_type"] == "Outgoing" else 1
+                            )
+                            edit_retailer = st.text_input("Retailer", value=str(selected_row["retailer"]))
+                        with col2:
+                            edit_amount = st.number_input(
+                                "Amount (S$)",
+                                min_value=0.01,
+                                value=float(selected_row["transaction_amount"]),
+                                step=1.0,
+                                format="%.2f"
+                            )
+                        col_save, col_delete = st.columns([1, 1])
+                        with col_save:
+                            submit_edit = st.form_submit_button("Update Transaction")
+                        with col_delete:
+                            submit_delete = st.form_submit_button("Archive Transaction")
 
-                        if submit_edit:
-                            # Determine final category logic
-                            if is_custom:
-                                if not custom_cat_val:
-                                    st.error("❌ Please provide a name for the custom category.")
-                                    st.stop()
-                                elif custom_cat_val not in allowed_categories and not confirm_new_cat:
-                                    st.error(
-                                        f"❌ Update blocked: **'{custom_cat_val}'** is not a registered category. "
-                                        "Please check the confirmation box above to proceed with adding it as a new custom category."
-                                    )
-                                    st.stop()
-                                else:
-                                    final_cat = custom_cat_val
+                    if submit_edit:
+                        # Determine final category logic
+                        if is_custom:
+                            if not custom_cat_val:
+                                st.error("❌ Please provide a name for the custom category.")
+                                st.stop()
+                            elif custom_cat_val not in allowed_categories and not confirm_new_cat:
+                                st.error(
+                                    f"❌ Update blocked: **'{custom_cat_val}'** is not a registered category. "
+                                    "Please check the confirmation box above to proceed with adding it as a new custom category."
+                                )
+                                st.stop()
                             else:
-                                final_cat = selected_cat_option
+                                final_cat = custom_cat_val
+                        else:
+                            final_cat = selected_cat_option
 
-                            # Save updates
-                            df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
-                            df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
-                            df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
-                            df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
-                            df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+                        # Save updates
+                        df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
+                        df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
+                        df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
+                        df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
+                        df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
 
-                            df = update_collated_data(df)
-                            st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
-                            st.rerun()
+                        new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
+                        # Save the edit to the audit trail
+                        record_audit(
+                            transaction_id=selected_id,
+                            action="EDIT",
+                            old_data=old_transaction,
+                            new_data=new_transaction,
+                        )
 
-                        if submit_delete:
-                            df = df[df["transaction_id"] != selected_id].copy()
-                            df = update_collated_data(df)
-                            st.success(f"Transaction {selected_id} deleted!")
-                            st.rerun()
+                        df = update_collated_data(df)
+                        st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
+                        st.rerun()
+
+                    if submit_delete:
+                        old_transaction = selected_row.to_dict()
+                        record_audit(
+                            transaction_id=selected_id,
+                            action="DELETE",
+                            old_data=old_transaction,
+                        )
+
+                        # Remove it from active transactions
+                        df = df[df["transaction_id"] != selected_id].copy()
+                        df = update_collated_data(df)
+
+                        st.success(f"Transaction {selected_id} archived!")
+                        st.rerun()
 
     st.title("Recommendation")
 
