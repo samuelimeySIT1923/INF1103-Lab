@@ -3,36 +3,40 @@ import os
 from datetime import datetime
  
 FILENAME = "inventory.json"
- 
- 
-# Persistence
+  
+#1 Persistence
+#1a find json file and load it if it exists, otherwise start with an empty inventory.
 def load_inventory():
     """Load data from inventory.json if it exists, otherwise start empty."""
     if os.path.exists(FILENAME):
         try:
+            #read file and load data
             with open(FILENAME, "r") as f:
                 data = json.load(f)
             print(f"{FILENAME} found. Inventory loaded successfully.")
+            #call data with products, transactions
             return data["products"], data.get("transactions", [])
+        #ERROR HANDLING: fallback if cannot use file
         except (json.JSONDecodeError, KeyError):
             print(f"{FILENAME} is corrupted. Starting with empty inventory.")
     else:
         print(f"{FILENAME} not found. Starting with empty inventory.")
+        #empty inventory and transaction history
     return [], []
  
- 
+ #1b Save the inventory and transaction history to inventory.json
 def save_inventory(inventory, transactions):
     """Save products and the full transaction history to inventory.json."""
+    #writes file, will override
     with open(FILENAME, "w") as f:
         json.dump({"products": inventory, "transactions": transactions}, f, indent=4)
     print(f"Inventory saved successfully to {FILENAME}.")
  
- 
-# ---------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------
+ #2 Helpers
+ #2a Record transaction history
 def record_transaction(transactions, product_id, change, kind):
     """Append one entry to the transaction history (never overwritten)."""
+    #format Time, id, type, stock qty
     transactions.append({
         "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "product_id": product_id,
@@ -40,31 +44,33 @@ def record_transaction(transactions, product_id, change, kind):
         "change": change,
     })
  
- 
+ #2b find product by ID
 def find_product(inventory, product_id):
     """Return the product dictionary with the given ID, or None."""
     for product in inventory:
+        #match id to lowercase input id
         if product["id"].lower() == product_id.lower():
             return product
     return None
  
- 
+ #2c Read number input with validation
 def read_number(prompt, cast, minimum=0):
     """Keep asking until the user enters a valid number >= minimum."""
     while True:
         try:
             value = cast(input(prompt))
+            #less than 0 = reject
             if value < minimum:
                 print(f"Value must be at least {minimum}.")
                 continue
             return value
+        #not number = reject
         except ValueError:
             print("Invalid input. Please enter a number.")
  
  
-# ---------------------------------------------------------------
-# Core functions
-# ---------------------------------------------------------------
+# 3 Core functions
+#3a Display all products in inventory
 def display_all(inventory):
     print("\nCurrent Inventory")
     print("-" * 48)
@@ -136,7 +142,7 @@ def show_menu():
     print("4. Search Product")
     print("5. Save Inventory")
     print("6. Exit")
-    print("----------------------------")
+    print("-----------------------------")
  
  
 def main():
