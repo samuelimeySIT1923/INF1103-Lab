@@ -126,7 +126,52 @@ def search_product(inventory):
     print(f"Stock: {product['stock']}")
     print("-" * 48)
 
-
+# Menu
+# ---------------------------------------------------------------
+def show_menu():
+    print("\n----------- MENU -----------")
+    print("1. Display All Products")
+    print("2. Add Product")
+    print("3. Update Stock")
+    print("4. Search Product")
+    print("5. Save Inventory")
+    print("6. Exit")
+    print("----------------------------")
+ 
+ 
+def main():
+    print("SIT Internal")
+    print("=" * 40)
+    print("INVENTORY MANAGEMENT SYSTEM")
+    print("=" * 40)
+    inventory, transactions = load_inventory()
+ 
+    while True:
+        show_menu()
+        choice = input("Enter option: ").strip()
+        if choice == "1":
+            display_all(inventory)
+        elif choice == "2":
+            add_product(inventory, transactions)
+        elif choice == "3":
+            update_stock(inventory, transactions)
+        elif choice == "4":
+            search_product(inventory)
+        elif choice == "5":
+            print("Saving inventory...")
+            save_inventory(inventory, transactions)
+        elif choice == "6":
+            print("Saving inventory before exit...")
+            save_inventory(inventory, transactions)
+            print("Thank you for using Inventory Management System.")
+            print("Program terminated.")
+            break
+        else:
+            print("Invalid option. Please choose 1-6.")
+ 
+ 
+if __name__ == "__main__":
+    main()
 
 
 
