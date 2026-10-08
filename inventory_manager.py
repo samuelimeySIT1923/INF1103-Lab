@@ -1,32 +1,134 @@
 import json
-
-print(f"==========================\nInventory Manager System\n==========================\n")
-
-#funciton to find json to load inventory
-
-print(f"----------Menu----------\n1. Display All Products\n2. Add Product\n3. Update Stock\n4. Search Product\n5. Save Inventory\n6. Exit\n------------------------\n")
-
-option = input("Enter option (1-6): ")
-if option == "1":
-#Current Inventory
-    print(f"Current Inventory:\n--------------------")
-elif option == "2":
-
-elif option == "2":
-elif option == "2":
-elif option == "2":
-elif option == "6":
-    quit = print(input("Are you sure you want to exit? (y/n): "))
-    if quit == 'y':
-        quit
-    elif quit == 'n':
-        return 'inflow',False
+import os
+from datetime import datetime
+ 
+FILENAME = "inventory.json"
+ 
+ 
+# Persistence
+def load_inventory():
+    """Load data from inventory.json if it exists, otherwise start empty."""
+    if os.path.exists(FILENAME):
+        try:
+            with open(FILENAME, "r") as f:
+                data = json.load(f)
+            print(f"{FILENAME} found. Inventory loaded successfully.")
+            return data["products"], data.get("transactions", [])
+        except (json.JSONDecodeError, KeyError):
+            print(f"{FILENAME} is corrupted. Starting with empty inventory.")
     else:
-            print("Invalid input. Please enter 'y' or 'n'.")
-            return swaptransaction()  # Recursively call until valid input is received
+        print(f"{FILENAME} not found. Starting with empty inventory.")
+    return [], []
+ 
+ 
+def save_inventory(inventory, transactions):
+    """Save products and the full transaction history to inventory.json."""
+    with open(FILENAME, "w") as f:
+        json.dump({"products": inventory, "transactions": transactions}, f, indent=4)
+    print(f"Inventory saved successfully to {FILENAME}.")
+ 
+ 
+# ---------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------
+def record_transaction(transactions, product_id, change, kind):
+    """Append one entry to the transaction history (never overwritten)."""
+    transactions.append({
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "product_id": product_id,
+        "type": kind,
+        "change": change,
+    })
+ 
+ 
+def find_product(inventory, product_id):
+    """Return the product dictionary with the given ID, or None."""
+    for product in inventory:
+        if product["id"].lower() == product_id.lower():
+            return product
+    return None
+ 
+ 
+def read_number(prompt, cast, minimum=0):
+    """Keep asking until the user enters a valid number >= minimum."""
+    while True:
+        try:
+            value = cast(input(prompt))
+            if value < minimum:
+                print(f"Value must be at least {minimum}.")
+                continue
+            return value
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+ 
+ 
+# ---------------------------------------------------------------
+# Core functions
+# ---------------------------------------------------------------
+def display_all(inventory):
+    print("\nCurrent Inventory")
+    print("-" * 48)
+    if not inventory:
+        print("No products in inventory.")
+    for p in inventory:
+        print(f"ID: {p['id']} | Name: {p['name']} | "
+              f"Price: ${p['price']:.2f} | Stock: {p['stock']}")
+    print("-" * 48)
+ 
+ 
+def add_product(inventory, transactions):
+    print("\nAdd New Product")
+    product_id = input("Product ID: ").strip()
+    if not product_id:
+        print("Product ID cannot be empty.")
+        return
+    if find_product(inventory, product_id):
+        print("Product ID already exists.")
+        return
+    name = input("Product Name: ").strip()
+    price = read_number("Price: ", float)
+    stock = read_number("Stock Quantity: ", int)
+ 
+    inventory.append({"id": product_id, "name": name,
+                      "price": price, "stock": stock})
+    record_transaction(transactions, product_id, stock, "add")
+    print("Product added successfully!")
+ 
+ 
+def update_stock(inventory, transactions):
+    print("\nUpdate Stock")
+    product = find_product(inventory, input("Enter Product ID: ").strip())
+    if product is None:
+        print("Product not found.")
+        return
+    print("Product Found:")
+    print(f"Name: {product['name']}")
+    print(f"Current Stock: {product['stock']}")
+    new_stock = read_number("New Stock Quantity: ", int)
+ 
+    change = new_stock - product["stock"]
+    product["stock"] = new_stock
+    record_transaction(transactions, product["id"], change, "update")
+    print("Stock updated successfully!")
+ 
+ 
+def search_product(inventory):
+    print("\nSearch Product")
+    product = find_product(inventory, input("Enter Product ID: ").strip())
+    if product is None:
+        print("Product not found.")
+        return
+    print("Product Found")
+    print("-" * 48)
+    print(f"ID: {product['id']}")
+    print(f"Name: {product['name']}")
+    print(f"Price: ${product['price']:.2f}")
+    print(f"Stock: {product['stock']}")
+    print("-" * 48)
 
-    elif option == "2
-if option == "1":
+
+
+
 
 
 #The store manager needs a system that remembers inventory levels even after the 
