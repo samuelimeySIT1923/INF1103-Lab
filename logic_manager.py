@@ -4,7 +4,6 @@ import pandas as pd
 def cashflow_risk_rule(df, planned_expenses=0):
     df = df.copy()
     df['date_and_time'] = pd.to_datetime(df['date_and_time'])
-    #assume the next 30 days will look like the most recent 30 days
     latest_date = df['date_and_time'].max()
     last_30_days = df[df['date_and_time'] > latest_date - pd.Timedelta(days=30)]
     inflow = last_30_days[last_30_days['transaction_type'] == 'Incoming']['transaction_amount'].sum()
