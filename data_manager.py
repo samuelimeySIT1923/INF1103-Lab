@@ -23,6 +23,7 @@ columns = [
 ]
 
 data_path = Path("data/collated_data.csv")
+audit_path = Path("data/audit_trail.csv")
 
 fallback_id_prefix = "TXN-ERR"
 id_width = 5
@@ -146,7 +147,70 @@ def save_collated_data(
         return existing_df
     return combined_df
 
+def record_audit(
+        transaction_id: str,
+        action: str,
+        old_data: Optional[Dict[str, Any]] = None,
+        new_data: Optional[Dict[str, Any]] = None,
+        path: Path = audit_path,
+) -> None:
+    """Record a transaction edit/archive in the audit trail"""
 
+    audit_columns = [
+        "audit_id",
+        "transaction_id",
+        "action",
+        "timestamp",
+        "old_date_and_time",
+        "old_retailer",
+        "old_category",
+        "old_transaction_amount",
+        "old_transaction_type",
+        "new_date_and_time",
+        "new_retailer",
+        "new_category",
+        "new_transaction_amount",
+        "new_transaction_type",
+    ]
+
+    if path.exists() and path.stat().st_size > 0:
+        audit_df = pd.read_csv(path)
+    else:
+        audit_df = pd.DataFrame(columns=audit_columns)
+
+    # Now it is safe to use audit_df
+    if audit_df.empty:
+        next_id = 1
+    else:
+        next_id = len(audit_df) + 1
+    old_data = old_data or {}
+    new_data = new_data or {}
+
+    audit_record = {
+        "audit_id": f"{next_id:05d}",
+        "transaction_id": transaction_id,
+        "action": action,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+
+        "old_date_and_time": old_data.get("date_and_time", ""),
+        "old_retailer": old_data.get("retailer", ""),
+        "old_category": old_data.get("category", ""),
+        "old_transaction_amount": old_data.get("transaction_amount", ""),
+        "old_transaction_type": old_data.get("transaction_type", ""),
+
+        "new_date_and_time": new_data.get("date_and_time", ""),
+        "new_retailer": new_data.get("retailer", ""),
+        "new_category": new_data.get("category", ""),
+        "new_transaction_amount": new_data.get("transaction_amount", ""),
+        "new_transaction_type": new_data.get("transaction_type", ""),
+    }
+
+    audit_df = pd.concat(
+        [audit_df, pd.DataFrame([audit_record])],
+        ignore_index=True,
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    audit_df.to_csv(path, index=False)
 
 #-----------------------------------------------------------------------------------#
 #Establish filter and query functions
