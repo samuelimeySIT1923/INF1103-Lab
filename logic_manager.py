@@ -9,7 +9,7 @@ def cashflow_risk_rule(df, planned_expenses=0):
     inflow = last_30_days[last_30_days['transaction_type'] == 'Incoming']['transaction_amount'].sum()
     outflow = last_30_days[last_30_days['transaction_type'] == 'Outgoing']['transaction_amount'].sum()
     projected_net_cashflow = inflow - outflow - planned_expenses
-    print(projected_net_cashflow)
+    #print(projected_net_cashflow)
     if projected_net_cashflow < 0:
         return True
     else:
