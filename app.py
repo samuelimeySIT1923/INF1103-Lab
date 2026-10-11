@@ -92,6 +92,82 @@ def assign_sequential_ids(df: pd.DataFrame) -> pd.DataFrame:
     df["transaction_id"] = new_ids
     return df
 
+# Validation func
+
+def validate_transactions(
+    records: List[Dict[str, Any]]
+) -> tuple[List[Dict[str, Any]], List[str]]:
+    valid_records = []
+    errors = []
+
+    for i, record in enumerate(records, start=1):
+        if not isinstance(record, dict):
+            errors.append(f"Record {i}: Invalid record format.")
+            continue
+
+        missing = [
+            col for col in columns
+            if col not in record
+            or record[col] is None
+            or pd.isna(record[col])
+            or str(record[col]).strip() == ""
+        ]
+
+        # Transaction IDs are assigned by your application
+        missing = [
+            col for col in missing
+            if col != "transaction_id"
+        ]
+
+        if missing:
+            errors.append(
+                f"Record {i}: Missing {', '.join(missing)}."
+            )
+            continue
+
+        try:
+            amount = float(record["transaction_amount"])
+
+            if not pd.notna(amount) or amount <= 0:
+                raise ValueError
+
+            date_value = pd.to_datetime(
+                record["date_and_time"],
+                errors="coerce"
+            )
+
+            if pd.isna(date_value):
+                raise ValueError
+
+            transaction_type = str(
+                record["transaction_type"]
+            ).strip()
+
+            if transaction_type not in ["Incoming", "Outgoing"]:
+                raise ValueError
+
+            cleaned_record = record.copy()
+            cleaned_record["transaction_amount"] = amount
+            cleaned_record["date_and_time"] = str(date_value)
+            cleaned_record["transaction_type"] = transaction_type
+            cleaned_record["retailer"] = str(
+                record["retailer"]
+            ).strip()
+            cleaned_record["category"] = str(
+                record["category"]
+            ).strip()
+
+            valid_records.append(cleaned_record)
+
+        except (ValueError, TypeError, OverflowError):
+            errors.append(
+                f"Record {i}: Invalid date, amount, or "
+                "transaction type."
+            )
+
+    return valid_records, errors
+
+
 
 #-----------------------------------------------------------------------------------#
 #Establish functions to load and save collated data
@@ -218,6 +294,17 @@ with tab1:
                     if not str(r.get("transaction_id", "")).startswith(fallback_id_prefix)
                 ]
                 failed_count = len(standardized_records) - len(good_records)
+
+                # Validate records that passed the above error check
+                good_records, validation_errors = validate_transactions(good_records)
+
+                failed_count += len(validation_errors)
+
+                if validation_errors:
+                    st.warning(
+                        f"{len(validation_errors)} additional record(s) "
+                        "failed validation and were not saved."
+                    )
 
                 if good_records:
                     df = save_collated_data(good_records)
@@ -533,41 +620,45 @@ with tab2:
                             submit_delete = st.form_submit_button("Archive Transaction")
 
                     if submit_edit:
-                        # Determine final category logic
-                        if is_custom:
-                            if not custom_cat_val:
-                                st.error("❌ Please provide a name for the custom category.")
-                                st.stop()
-                            elif custom_cat_val not in allowed_categories and not confirm_new_cat:
-                                st.error(
-                                    f"❌ Update blocked: **'{custom_cat_val}'** is not a registered category. "
-                                    "Please check the confirmation box above to proceed with adding it as a new custom category."
-                                )
-                                st.stop()
-                            else:
-                                final_cat = custom_cat_val
+                        if not edit_retailer.strip():
+                            st.error("Please provide a retailer name.")
+
                         else:
-                            final_cat = selected_cat_option
+                        # Determine final category logic
+                            if is_custom:
+                                if not custom_cat_val:
+                                    st.error("❌ Please provide a name for the custom category.")
+                                    st.stop()
+                                elif custom_cat_val not in allowed_categories and not confirm_new_cat:
+                                    st.error(
+                                        f"❌ Update blocked: **'{custom_cat_val}'** is not a registered category. "
+                                        "Please check the confirmation box above to proceed with adding it as a new custom category."
+                                    )
+                                    st.stop()
+                                else:
+                                    final_cat = custom_cat_val
+                            else:
+                                final_cat = selected_cat_option
 
-                        # Save updates
-                        df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
-                        df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
-                        df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
-                        df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
-                        df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+                            # Save updates
+                            df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
+                            df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
+                            df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
+                            df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
+                            df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
 
-                        new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
-                        # Save the edit to the audit trail
-                        record_audit(
-                            transaction_id=selected_id,
-                            action="EDIT",
-                            old_data=old_transaction,
-                            new_data=new_transaction,
-                        )
+                            new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
+                            # Save the edit to the audit trail
+                            record_audit(
+                                transaction_id=selected_id,
+                                action="EDIT",
+                                old_data=old_transaction,
+                                new_data=new_transaction,
+                            )
 
-                        df = update_collated_data(df)
-                        st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
-                        st.rerun()
+                            df = update_collated_data(df)
+                            st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
+                            st.rerun()
 
                     if submit_delete:
                         old_transaction = selected_row.to_dict()
@@ -590,8 +681,17 @@ with tab2:
     audit_path = Path("data/audit_trail.csv")
 
     if audit_path.exists():
-        audit_df = pd.read_csv(audit_path)
-        st.dataframe(audit_df, hide_index=True)
+        try:
+            audit_df = pd.read_csv(audit_path)
+            st.dataframe(audit_df, hide_index=True)
+
+        except (OSError, pd.errors.ParserError,
+                UnicodeDecodeError) as exc:
+            st.error(
+                "Unable to load the audit trail. "
+                "The audit file may be damaged or inaccessible."
+            )
+            print(f"Audit trail read error: {exc}")
     else:
         st.info("No audit records yet.")
 
