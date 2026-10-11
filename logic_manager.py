@@ -28,7 +28,7 @@ def excessive_discretionary_spending(
     outgoing = df[df["transaction_type"]=="Outgoing"]
 
     #find discretionary cats
-    discretionary_categories = {"entertainmentm", "shopping"}
+    discretionary_categories = {"entertainment", "shopping"}
     if include_misc:
         discretionary_categories.add("misc")
     categories = outgoing["category"].astype(str).str.strip().str.lower()

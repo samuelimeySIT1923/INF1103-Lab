@@ -561,6 +561,10 @@ with tab2:
     with st.form("Recommend"):
         current_balance = st.text_input("Current Balance:")
         monthly_income = st.text_input("Monthly Income:")
+        include_misc = st.checkbox(
+            "Include Misc in discretionary spending calculation",
+            value=False
+        )
         submitted_rec = st.form_submit_button("Generate")
 
     if submitted_rec:
@@ -574,61 +578,91 @@ with tab2:
                 m_inc = float(monthly_income)
 
                 st.success("Generating response!")
-
-                outgoing_all = df[df["transaction_type"] == "Outgoing"].copy()
-
-                outgoing_all["transaction_amount"] = pd.to_numeric(
-                    outgoing_all["transaction_amount"],
-                    errors="coerce"
-                ).fillna(0)
-                
-                total_expenses = pd.to_numeric(
-                    outgoing_all["transaction_amount"], errors="coerce"
-                ).sum()
-
-                discretionary_alert = excessive_discretionary_spending(
-                    m_inc, df, include_misc=False
+                #limit to current/latest date(in the records) for recommendations rather than every recorded transactions
+                transaction_dates = pd.to_datetime(
+                    df["date_and_time"],
+                    errors="coerce",
+                    format="mixed"
                 )
 
-                bills_alert = high_bills_burden(m_inc, df)
+                valid_dates = transaction_dates.dropna()
 
-                st.subheader("Assessment Summary")
-                st.write(f"• **Reported Monthly Income**: S$ {m_inc:,.2f}")
-                st.write(f"• **Current Balance**: S$ {curr_bal:,.2f}")
-                st.write(f"• **Total Recorded Expenses**: S$ {total_expenses:,.2f}")
-
-                if total_expenses > m_inc:
+                if valid_dates.empty:
                     st.warning(
-                        "⚠️ **Cash-Flow Risk**: Expenses exceed monthly income. "
-                        "Consider curbing discretionary spending."
+                        "Cannot generate monthly recommendations "
+                        "because no valid transaction dates were found."
                     )
                 else:
-                    st.success(
-                        "✅ **Healthy Cash Flow**: Spending remains within monthly income bounds."
+                    latest_period = valid_dates.dt.to_period("M").max()
+
+                    # Keep only transactions from the latest month
+                    monthly_df = df.loc[
+                        transaction_dates.dt.to_period("M") == latest_period
+                    ].copy()
+
+                    st.caption(
+                        f"Monthly recommendations based on "
+                        f"{latest_period.strftime('%B %Y')} transactions."
                     )
 
-                if curr_bal < (3 * total_expenses):
-                    st.warning(
-                        "⚠️ **Emergency Reserve Alert**: Current balance is below "
-                        "the recommended 3-month expense threshold."
-                    )
-                else:
-                    st.success(
-                        "✅ **Adequate Safety Net**: Emergency reserves meet recommended guidelines."
-                    )
-                # discretionary-spending rule
-                if discretionary_alert:
-                    st.warning(
-                        "⚠️ **High Discretionary Spending**: "
-                        "Discretionary spending exceeds 50% of monthly income."
+                
+                    outgoing_all = monthly_df[
+                        monthly_df["transaction_type"] == "Outgoing"
+                    ].copy()
+
+                    outgoing_all["transaction_amount"] = pd.to_numeric(
+                        outgoing_all["transaction_amount"],
+                        errors="coerce"
+                    ).fillna(0)
+
+                    total_expenses = outgoing_all["transaction_amount"].sum()
+
+
+                    discretionary_alert = excessive_discretionary_spending(
+                        m_inc, monthly_df, include_misc=include_misc
                     )
 
-                # the high bills rule
-                if bills_alert:
-                    st.warning(
-                        "⚠️ **High Bills Burden**: "
-                        "Bills spending exceeds 5% of monthly income."
+                    bills_alert = high_bills_burden(
+                        m_inc, monthly_df
                     )
+
+                    st.subheader("Assessment Summary")
+                    st.write(f"• **Reported Monthly Income**: S$ {m_inc:,.2f}")
+                    st.write(f"• **Current Balance**: S$ {curr_bal:,.2f}")
+                    st.write(f"• **Total Recorded Expenses**: S$ {total_expenses:,.2f}")
+
+                    if total_expenses > m_inc:
+                        st.warning(
+                            "⚠️ **Cash-Flow Risk**: Expenses exceed monthly income. "
+                            "Consider curbing discretionary spending."
+                        )
+                    else:
+                        st.success(
+                            "✅ **Healthy Cash Flow**: Spending remains within monthly income bounds."
+                        )
+
+                    if curr_bal < (3 * total_expenses):
+                        st.warning(
+                            "⚠️ **Emergency Reserve Alert**: Current balance is below "
+                            "the recommended 3-month expense threshold."
+                        )
+                    else:
+                        st.success(
+                            "✅ **Adequate Safety Net**: Emergency reserves meet recommended guidelines."
+                        )
+                    # discretionary-spending rule
+                    if discretionary_alert:
+                        st.warning(
+                            "⚠️ **High Discretionary Spending**: "
+                            "Discretionary spending exceeds 50% of monthly income."
+                        )
+
+                    # the high bills rule
+                    if bills_alert:
+                        st.warning(
+                            "⚠️ **High Bills Burden**: "
+                            "Bills spending exceeds 5% of monthly income."
+                        )
 
             except ValueError:
                 st.error(
