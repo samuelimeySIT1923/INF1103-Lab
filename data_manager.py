@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -24,6 +24,23 @@ columns = [
 
 data_path = Path("data/collated_data.csv")
 audit_path = Path("data/audit_trail.csv")
+
+audit_columns = [
+    "audit_id",
+    "transaction_id",
+    "action",
+    "timestamp",
+    "old_date_and_time",
+    "old_retailer",
+    "old_category",
+    "old_transaction_amount",
+    "old_transaction_type",
+    "new_date_and_time",
+    "new_retailer",
+    "new_category",
+    "new_transaction_amount",
+    "new_transaction_type",
+]
 
 fallback_id_prefix = "TXN-ERR"
 id_width = 5
@@ -56,12 +73,22 @@ def assign_sequential_ids(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def write_records(df: pd.DataFrame, path: Path = data_path) -> None:
-    """Write the DataFrame to CSV through a temp file so a failed write cannot corrupt the data."""
+def write_csv(df: pd.DataFrame, path: Path) -> None:
+    """Write a DataFrame to CSV through a temp file so a failed write cannot corrupt the data."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = path.with_name(path.name + ".tmp")
-    df[columns].to_csv(temp_path, index=False)
+    df.to_csv(temp_path, index=False)
     os.replace(temp_path, path)
+
+
+def write_records(df: pd.DataFrame, path: Path = data_path) -> None:
+    """Write the transaction records to the data file."""
+    write_csv(df[columns], path)
+
+
+def parse_dates(df: pd.DataFrame) -> pd.Series:
+    """Parse the date_and_time column, turning unreadable values into NaT."""
+    return pd.to_datetime(df["date_and_time"], errors="coerce", format="mixed")
 
 
 def quarantine_corrupt_file(path: Path = data_path) -> Optional[Path]:
@@ -162,6 +189,32 @@ def update_collated_data(
     return updated_df
 
 
+#-----------------------------------------------------------------------------------#
+#Establish functions to load and record the audit trail
+
+def load_audit_trail(path: Path = audit_path) -> pd.DataFrame:
+    """Load the audit trail, returning an empty DataFrame if it is missing or corrupt."""
+    try:
+        if not path.exists() or path.stat().st_size == 0:
+            return pd.DataFrame(columns=audit_columns)
+
+        try:
+            audit_df = pd.read_csv(path, dtype={"audit_id": str, "transaction_id": str})
+        except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError):
+            logger.exception("Audit trail %s could not be parsed", path)
+            audit_df = None
+
+        if audit_df is None or "audit_id" not in audit_df.columns:
+            quarantine_corrupt_file(path)
+            return pd.DataFrame(columns=audit_columns)
+
+        return audit_df.reindex(columns=audit_columns)
+
+    except OSError:
+        logger.exception("Could not access audit trail %s", path)
+        return pd.DataFrame(columns=audit_columns)
+
+
 def record_audit(
         transaction_id: str,
         action: str,
@@ -170,39 +223,12 @@ def record_audit(
         path: Path = audit_path,
 ) -> None:
     """Record a transaction edit/archive in the audit trail"""
-
-    audit_columns = [
-        "audit_id",
-        "transaction_id",
-        "action",
-        "timestamp",
-        "old_date_and_time",
-        "old_retailer",
-        "old_category",
-        "old_transaction_amount",
-        "old_transaction_type",
-        "new_date_and_time",
-        "new_retailer",
-        "new_category",
-        "new_transaction_amount",
-        "new_transaction_type",
-    ]
-
-    if path.exists() and path.stat().st_size > 0:
-        audit_df = pd.read_csv(path)
-    else:
-        audit_df = pd.DataFrame(columns=audit_columns)
-
-    # Now it is safe to use audit_df
-    if audit_df.empty:
-        next_id = 1
-    else:
-        next_id = len(audit_df) + 1
+    audit_df = load_audit_trail(path)
     old_data = old_data or {}
     new_data = new_data or {}
 
     audit_record = {
-        "audit_id": f"{next_id:05d}",
+        "audit_id": f"{len(audit_df) + 1:05d}",
         "transaction_id": transaction_id,
         "action": action,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -220,32 +246,32 @@ def record_audit(
         "new_transaction_type": new_data.get("transaction_type", ""),
     }
 
-    audit_df = pd.concat(
-        [audit_df, pd.DataFrame([audit_record])],
-        ignore_index=True,
-    )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    audit_df.to_csv(path, index=False)
-
-
-def load_audit_trail(path: Path = audit_path) -> pd.DataFrame:
-    """Load the audit trail, returning an empty DataFrame if it is missing or unreadable."""
-    if not path.exists() or path.stat().st_size == 0:
-        return pd.DataFrame()
+    new_row = pd.DataFrame([audit_record], columns=audit_columns)
+    if audit_df.empty:
+        audit_df = new_row
+    else:
+        audit_df = pd.concat([audit_df, new_row], ignore_index=True)
 
     try:
-        return pd.read_csv(path, dtype={"audit_id": str, "transaction_id": str})
-    except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError, OSError):
-        logger.exception("Audit trail %s could not be read", path)
-        return pd.DataFrame()
+        write_csv(audit_df, path)
+    except OSError:
+        logger.exception("Could not save audit record to %s", path)
+
+
 
 #-----------------------------------------------------------------------------------#
 #Establish filter and query functions
 
 def get_available_months(df: pd.DataFrame) -> List[int]:
     """Return the sorted month numbers (1-12) that appear in the records."""
-    dates = pd.to_datetime(df["date_and_time"], errors="coerce")
+    dates = parse_dates(df)
     return sorted(int(m) for m in dates.dt.month.dropna().unique())
+
+
+def get_available_month_years(df: pd.DataFrame) -> List[Tuple[int, int]]:
+    """Return the sorted (year, month) pairs that appear in the records."""
+    dates = parse_dates(df).dropna()
+    return sorted(set(zip(dates.dt.year.astype(int), dates.dt.month.astype(int))))
 
 
 def filter_records(
@@ -265,7 +291,7 @@ def filter_records(
     mask = pd.Series(True, index=df.index)
 
     if month is not None or year is not None:
-        dates = pd.to_datetime(df["date_and_time"], errors="coerce")
+        dates = parse_dates(df)
         if month is not None:
             mask &= dates.dt.month == month
         if year is not None:
