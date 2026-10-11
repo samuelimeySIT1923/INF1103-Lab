@@ -486,6 +486,7 @@ with tab2:
     with st.form("Recommend"):
         current_balance = st.text_input("Current Balance:")
         monthly_income = st.text_input("Monthly Income:")
+        include_misc = st.checkbox("Include Misc in discretionary spending calculation", value=False)
         submitted_rec = st.form_submit_button("Generate")
 
     if submitted_rec:
@@ -521,11 +522,40 @@ with tab2:
                     outgoing_all["transaction_amount"], errors="coerce"
                 ).sum()
 
-                discretionary_alert = excessive_discretionary_spending(
-                    m_inc, df, include_misc=False
+                # Filter for recommendation calculations to look at monthly recommendations.
+
+                if option == "All":
+                    st.error(
+                        "Please select a specific month and year from the Month dropdown "
+                        "to generate the monthly assessment."
+                    )
+                    st.stop()
+
+                selected_year, selected_month = month_lookup[option]
+
+                monthly_df = filter_records(
+                    df,
+                    month=selected_month,
+                    year=selected_year
                 )
 
-                bills_alert = high_bills_burden(m_inc, df)
+                outgoing_all = monthly_df[
+                    monthly_df["transaction_type"] == "Outgoing"
+                ].copy()
+
+                outgoing_all["transaction_amount"] = pd.to_numeric(
+                    outgoing_all["transaction_amount"],
+                    errors="coerce"
+                ).fillna(0)
+
+                total_expenses = outgoing_all["transaction_amount"].sum()
+
+                # Run both business rules using only the selected month
+                discretionary_alert = excessive_discretionary_spending(
+                    m_inc, monthly_df, include_misc=include_misc
+                )
+
+                bills_alert = high_bills_burden(m_inc, monthly_df)
 
                 st.subheader("Assessment Summary")
                 st.write(f"• **Reported Monthly Income**: S$ {m_inc:,.2f}")
