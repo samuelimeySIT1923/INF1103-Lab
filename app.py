@@ -12,6 +12,10 @@ import streamlit as st
 
 from ai_manager import  extract_batch_standardized_transactions, allowed_categories
 from data_manager import record_audit
+from logic_manager import (
+    excessive_discretionary_spending,
+    high_bills_burden,
+)
 
 #-----------------------------------------------------------------------------------#
 #Establish columns and data path for collated data
@@ -571,10 +575,22 @@ with tab2:
 
                 st.success("Generating response!")
 
-                outgoing_all = df[df["transaction_type"] == "Outgoing"]
+                outgoing_all = df[df["transaction_type"] == "Outgoing"].copy()
+
+                outgoing_all["transaction_amount"] = pd.to_numeric(
+                    outgoing_all["transaction_amount"],
+                    errors="coerce"
+                ).fillna(0)
+                
                 total_expenses = pd.to_numeric(
                     outgoing_all["transaction_amount"], errors="coerce"
                 ).sum()
+
+                discretionary_alert = excessive_discretionary_spending(
+                    m_inc, df, include_misc=False
+                )
+
+                bills_alert = high_bills_burden(m_inc, df)
 
                 st.subheader("Assessment Summary")
                 st.write(f"• **Reported Monthly Income**: S$ {m_inc:,.2f}")
@@ -599,6 +615,19 @@ with tab2:
                 else:
                     st.success(
                         "✅ **Adequate Safety Net**: Emergency reserves meet recommended guidelines."
+                    )
+                # discretionary-spending rule
+                if discretionary_alert:
+                    st.warning(
+                        "⚠️ **High Discretionary Spending**: "
+                        "Discretionary spending exceeds 50% of monthly income."
+                    )
+
+                # the high bills rule
+                if bills_alert:
+                    st.warning(
+                        "⚠️ **High Bills Burden**: "
+                        "Bills spending exceeds 5% of monthly income."
                     )
 
             except ValueError:
