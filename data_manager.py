@@ -147,6 +147,21 @@ def save_collated_data(
         return existing_df
     return combined_df
 
+def update_collated_data(
+    updated_df: pd.DataFrame,
+    path: Path = data_path,
+) -> pd.DataFrame:
+    """Overwrite the data file with a modified DataFrame while ensuring sequential IDs."""
+    updated_df = assign_sequential_ids(updated_df[columns].copy())
+
+    try:
+        write_records(updated_df, path)
+    except OSError:
+        logger.exception("Could not update records in %s", path)
+        return load_collated_data(path)
+    return updated_df
+
+
 def record_audit(
         transaction_id: str,
         action: str,
@@ -211,6 +226,18 @@ def record_audit(
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     audit_df.to_csv(path, index=False)
+
+
+def load_audit_trail(path: Path = audit_path) -> pd.DataFrame:
+    """Load the audit trail, returning an empty DataFrame if it is missing or unreadable."""
+    if not path.exists() or path.stat().st_size == 0:
+        return pd.DataFrame()
+
+    try:
+        return pd.read_csv(path, dtype={"audit_id": str, "transaction_id": str})
+    except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError, ValueError, OSError):
+        logger.exception("Audit trail %s could not be read", path)
+        return pd.DataFrame()
 
 #-----------------------------------------------------------------------------------#
 #Establish filter and query functions
