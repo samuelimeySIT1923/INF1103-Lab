@@ -96,34 +96,47 @@ def assign_sequential_ids(df: pd.DataFrame) -> pd.DataFrame:
 #Establish functions to load and save collated data
 
 def load_collated_data() -> pd.DataFrame:
-    data_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        data_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if data_path.exists() and data_path.stat().st_size > 0:
-        try:
-            raw_df = pd.read_csv(data_path, dtype={"transaction_id": str})
-            df = raw_df.copy()
+        if data_path.exists() and data_path.stat().st_size > 0:
+            try:
+                raw_df = pd.read_csv(data_path, dtype={"transaction_id": str})
+                df = raw_df.copy()
 
-            for col in columns:
-                if col not in df.columns:
-                    df[col] = ""
-            df = df[columns]
+                for col in columns:
+                    if col not in df.columns:
+                        df[col] = ""
+                df = df[columns]
 
-            df = df[~df["transaction_id"].astype(str).str.startswith(fallback_id_prefix)]
-            df = df.reset_index(drop=True)
+                df = df[~df["transaction_id"].astype(str).str.startswith(fallback_id_prefix)]
+                df = df.reset_index(drop=True)
 
-            df["transaction_type"] = df["transaction_type"].replace(legacy_type_map)
+                df["transaction_type"] = df["transaction_type"].replace(legacy_type_map)
 
-            df = assign_sequential_ids(df)
+                df = assign_sequential_ids(df)
 
-            if not df.equals(raw_df):
-                df.to_csv(data_path, index=False)
-            return df
-        except Exception:
-            return pd.DataFrame(columns=columns)
+                if not df.equals(raw_df):
+                    df.to_csv(data_path, index=False)
+                return df
+            except Exception:
+                print(f"Error loading or processing collated data: {exc}")
+                return pd.DataFrame(columns=columns)
 
-    df = pd.DataFrame(columns=columns)
-    df.to_csv(data_path, index=False)
-    return df
+        df = pd.DataFrame(columns=columns)
+        df.to_csv(data_path, index=False)
+        return df
+
+        
+    except (OSError, ValueError, pd.errors.ParserError, UnicodeDecodeError) as exc:
+        st.error(
+            "Unable to load transaction data. "
+            "Please check whether the data file exists "
+            "and is readable and correctly formatted."
+        )
+        print(f"Error loading transaction data: {exc}")
+
+        return pd.DataFrame(columns=columns)
 
 
 def save_collated_data(new_records: List[Dict[str, Any]]) -> pd.DataFrame:
