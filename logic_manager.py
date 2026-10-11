@@ -21,14 +21,14 @@ def excessive_discretionary_spending(
         monthly_income, df, include_misc=False
 ):
     df = df.copy()
-    #convert to numbers n kep yhe outgoing transactions
+    #convert to numbers n keep the outgoing transactions
     df["transaction_amount"]=pd.to_numeric(
         df["transaction_amount"], errors="coerce"
     ).fillna(0)
     outgoing = df[df["transaction_type"]=="Outgoing"]
 
     #find discretionary cats
-    discretionary_categories = {"entertainmentm", "shopping"}
+    discretionary_categories = {"entertainment", "shopping"}
     if include_misc:
         discretionary_categories.add("misc")
     categories = outgoing["category"].astype(str).str.strip().str.lower()
