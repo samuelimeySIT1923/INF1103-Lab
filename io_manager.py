@@ -320,28 +320,29 @@ with tab2:
             if submit_add:
                 if not add_retailer.strip():
                     st.error("Please provide a retailer name.")
-                    st.stop()
+                    
 
-                if selected_add_cat == "+ Custom Category..." and not custom_cat_input.strip():
+                elif selected_add_cat == "+ Custom Category..." and not custom_cat_input.strip():
                     st.error("Please provide a name for the custom category.")
-                    st.stop()
-                if selected_add_cat == "+ Custom Category...":
-                    cat_value = custom_cat_input.strip()
-                    final_add_cat = cat_value.title()
-                else:
-                    final_add_cat = selected_add_cat
 
-                new_rec = {
-                    "transaction_id": "",
-                    "date_and_time": f"{add_date} 00:00:00",
-                    "retailer": add_retailer.strip(),
-                    "category": final_add_cat,
-                    "transaction_amount": float(add_amount),
-                    "transaction_type": add_type,
-                }
-                df = save_collated_data([new_rec])
-                st.success("New transaction successfully recorded!")
-                st.rerun()
+                else:    
+                    if selected_add_cat == "+ Custom Category...":
+                        cat_value = custom_cat_input.strip()
+                        final_add_cat = cat_value.title()
+                    else:
+                        final_add_cat = selected_add_cat
+
+                    new_rec = {
+                        "transaction_id": "",
+                        "date_and_time": f"{add_date} 00:00:00",
+                        "retailer": add_retailer.strip(),
+                        "category": final_add_cat,
+                        "transaction_amount": float(add_amount),
+                        "transaction_type": add_type,
+                    }
+                    df = save_collated_data([new_rec])
+                    st.success("New transaction successfully recorded!")
+                    st.rerun()
 
         elif action == "✏️ Edit / Archive Existing Transaction":
             if df.empty:
@@ -419,42 +420,47 @@ with tab2:
                     if submit_edit:
                         if not edit_retailer.strip():
                             st.error("Please provide a retailer name.")
-                            st.stop()
+                            
                         # Determine final category logic
-                        if is_custom:
-                            if not custom_cat_val:
+                        elif is_custom and not custom_cat_val:
                                 st.error("❌ Please provide a name for the custom category.")
-                                st.stop()
-                            elif custom_cat_val not in allowed_categories and not confirm_new_cat:
-                                st.error(
-                                    f"❌ Update blocked: **'{custom_cat_val}'** is not a registered category. "
-                                    "Please check the confirmation box above to proceed with adding it as a new custom category."
-                                )
-                                st.stop()
-                            else:
-                                final_cat = custom_cat_val
+                                
+                        elif (
+                            is_custom
+                            and custom_cat_val not in allowed_categories
+                            and not confirm_new_cat
+                        ):
+                            st.error(
+                                f"❌ Update blocked: '{custom_cat_val}' is not a registered category. "
+                                "Please confirm adding it as a new custom category."
+                            )
+
                         else:
-                            final_cat = selected_cat_option
+                            # Determine final category only after validation passes
+                            if is_custom:
+                                final_cat = custom_cat_val
+                            else:
+                                final_cat = selected_cat_option
 
-                        # Save updates
-                        df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
-                        df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
-                        df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
-                        df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
-                        df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+                            # Save updates
+                            df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
+                            df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
+                            df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
+                            df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
+                            df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
 
-                        new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
-                        # Save the edit to the audit trail
-                        record_audit(
-                            transaction_id=selected_id,
-                            action="EDIT",
-                            old_data=old_transaction,
-                            new_data=new_transaction,
-                        )
+                            new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
+                            # Save the edit to the audit trail
+                            record_audit(
+                                transaction_id=selected_id,
+                                action="EDIT",
+                                old_data=old_transaction,
+                                new_data=new_transaction,
+                            )
 
-                        df = update_collated_data(df)
-                        st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
-                        st.rerun()
+                            df = update_collated_data(df)
+                            st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
+                            st.rerun()
 
                     if submit_delete:
                         old_transaction = selected_row.to_dict()
