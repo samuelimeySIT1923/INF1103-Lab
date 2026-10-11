@@ -12,6 +12,10 @@ import streamlit as st
 
 from ai_manager import  extract_batch_standardized_transactions, allowed_categories
 from data_manager import record_audit
+from logic_manager import (
+    excessive_discretionary_spending,
+    high_bills_burden,
+)
 
 #-----------------------------------------------------------------------------------#
 #Establish columns and data path for collated data
@@ -242,22 +246,74 @@ with tab2:
         )
     else:
         df_display = df.copy()
-        df_display["date"] = pd.to_datetime(df_display["date_and_time"], errors="coerce")
+        df_display["date"] = pd.to_datetime(
+            df_display["date_and_time"],
+            errors="coerce",
+            format="mixed"
+        )
+        
+        # error catch for invalid/unsupported dates
+        # to make nicer as error catch in future
+        invalid_dates = df_display[df_display["date"].isna()]
+
+        st.write("Number of invalid dates:", len(invalid_dates))
+        st.write("Examples of invalid date values:")
+        st.dataframe(
+            invalid_dates[["transaction_id", "date_and_time"]].head(20),
+            hide_index=True,
+        )
+
         df_display["transaction_amount"] = pd.to_numeric(
             df_display["transaction_amount"], errors="coerce"
         ).fillna(0.0)
         df_display = df_display.sort_values("date")
 
-        selectbox_list = ["All"]
-        valid_months = df_display["date"].dt.month.dropna().unique()
-        for month_num in sorted(valid_months):
-            selectbox_list.append(calendar.month_name[int(month_num)])
+        # selectbox_list = ["All"]
+        # valid_months = df_display["date"].dt.month.dropna().unique()
+        # for month_num in sorted(valid_months):
+        #     selectbox_list.append(calendar.month_name[int(month_num)])
+
+        # option = st.selectbox("Month", selectbox_list)
+
+        # if option != "All":
+        #     month_idx = list(calendar.month_name).index(option)
+        #     df_display = df_display[df_display["date"].dt.month == month_idx]
+        
+        # New month dropdown selection to include month-years
+        df_display["month_period"] = df_display["date"].dt.to_period("M")
+
+        st.write("Dates found in transaction data:")
+        st.dataframe(
+            df[["transaction_id", "date_and_time"]],
+            hide_index=True,
+        )
+
+        st.write(
+            "Transactions with invalid dates:",
+            df_display["date"].isna().sum()
+        )
+
+        # Get all distinct months, including their years
+        valid_months = sorted(
+            df_display["month_period"].dropna().unique()
+        )
+
+        month_lookup = {
+            period.strftime("%B %Y"): period
+            for period in valid_months
+        }
+
+        selectbox_list = ["All"] + list(month_lookup.keys())
 
         option = st.selectbox("Month", selectbox_list)
 
+        # Filter by the exact month AND year
         if option != "All":
-            month_idx = list(calendar.month_name).index(option)
-            df_display = df_display[df_display["date"].dt.month == month_idx]
+            selected_period = month_lookup[option]
+            df_display = df_display[
+                df_display["month_period"] == selected_period
+            ]
+
 
         table_tab, bar_tab, line_tab = st.tabs(
             ["Table", "Amount Spent Per Category", "Cumulative Amount Spent Over Time"]
@@ -519,10 +575,22 @@ with tab2:
 
                 st.success("Generating response!")
 
-                outgoing_all = df[df["transaction_type"] == "Outgoing"]
+                outgoing_all = df[df["transaction_type"] == "Outgoing"].copy()
+
+                outgoing_all["transaction_amount"] = pd.to_numeric(
+                    outgoing_all["transaction_amount"],
+                    errors="coerce"
+                ).fillna(0)
+                
                 total_expenses = pd.to_numeric(
                     outgoing_all["transaction_amount"], errors="coerce"
                 ).sum()
+
+                discretionary_alert = excessive_discretionary_spending(
+                    m_inc, df, include_misc=False
+                )
+
+                bills_alert = high_bills_burden(m_inc, df)
 
                 st.subheader("Assessment Summary")
                 st.write(f"• **Reported Monthly Income**: S$ {m_inc:,.2f}")
@@ -547,6 +615,19 @@ with tab2:
                 else:
                     st.success(
                         "✅ **Adequate Safety Net**: Emergency reserves meet recommended guidelines."
+                    )
+                # discretionary-spending rule
+                if discretionary_alert:
+                    st.warning(
+                        "⚠️ **High Discretionary Spending**: "
+                        "Discretionary spending exceeds 50% of monthly income."
+                    )
+
+                # the high bills rule
+                if bills_alert:
+                    st.warning(
+                        "⚠️ **High Bills Burden**: "
+                        "Bills spending exceeds 5% of monthly income."
                     )
 
             except ValueError:
