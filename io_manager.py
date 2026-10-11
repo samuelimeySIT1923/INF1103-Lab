@@ -3,7 +3,6 @@ import csv
 import json
 import os
 from typing import Any, Dict, List
-import math
 
 import pandas as pd
 import plotly.express as px
@@ -66,164 +65,6 @@ def parse_uploaded_file(uploaded_file: Any) -> List[Any]:
     return items
 
 
-def assign_sequential_ids(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    ids = df["transaction_id"].astype(str).str.strip()
-    is_numeric = ids.str.isdigit()
-
-    next_id = int(ids[is_numeric].astype(int).max()) + 1 if is_numeric.any() else 1
-
-    new_ids = ids.copy()
-    new_ids[is_numeric] = ids[is_numeric].astype(int).map(lambda n: f"{n:0{id_width}d}")
-    for idx in df.index[~is_numeric]:
-        new_ids[idx] = f"{next_id:0{id_width}d}"
-        next_id += 1
-
-    df["transaction_id"] = new_ids
-    return df
-
-# Validation func
-
-def validate_transactions(
-    records: List[Dict[str, Any]]
-) -> tuple[List[Dict[str, Any]], List[str]]:
-    valid_records = []
-    errors = []
-
-    for i, record in enumerate(records, start=1):
-        if not isinstance(record, dict):
-            errors.append(f"Record {i}: Invalid record format.")
-            continue
-
-        missing = [
-            col for col in columns
-            if col not in record
-            or record[col] is None
-            or pd.isna(record[col])
-            or str(record[col]).strip() == ""
-        ]
-
-        # Transaction IDs are assigned by your application
-        missing = [
-            col for col in missing
-            if col != "transaction_id"
-        ]
-
-        if missing:
-            errors.append(
-                f"Record {i}: Missing {', '.join(missing)}."
-            )
-            continue
-
-        try:
-            amount = float(record["transaction_amount"])
-
-            if not pd.notna(amount) or amount <= 0:
-                raise ValueError
-
-            date_value = pd.to_datetime(
-                record["date_and_time"],
-                errors="coerce"
-            )
-
-            if pd.isna(date_value):
-                raise ValueError
-
-            transaction_type = str(
-                record["transaction_type"]
-            ).strip()
-
-            if transaction_type not in ["Incoming", "Outgoing"]:
-                raise ValueError
-
-            cleaned_record = record.copy()
-            cleaned_record["transaction_amount"] = amount
-            cleaned_record["date_and_time"] = str(date_value)
-            cleaned_record["transaction_type"] = transaction_type
-            cleaned_record["retailer"] = str(
-                record["retailer"]
-            ).strip()
-            cleaned_record["category"] = str(
-                record["category"]
-            ).strip()
-
-            valid_records.append(cleaned_record)
-
-        except (ValueError, TypeError, OverflowError):
-            errors.append(
-                f"Record {i}: Invalid date, amount, or "
-                "transaction type."
-            )
-
-    return valid_records, errors
-
-
-
-#-----------------------------------------------------------------------------------#
-#Establish functions to load and save collated data
-
-def load_collated_data() -> pd.DataFrame:
-    try:
-        data_path.parent.mkdir(parents=True, exist_ok=True)
-
-        if data_path.exists() and data_path.stat().st_size > 0:
-            try:
-                raw_df = pd.read_csv(data_path, dtype={"transaction_id": str})
-                df = raw_df.copy()
-
-                for col in columns:
-                    if col not in df.columns:
-                        df[col] = ""
-                df = df[columns]
-
-                df = df[~df["transaction_id"].astype(str).str.startswith(fallback_id_prefix)]
-                df = df.reset_index(drop=True)
-
-                df["transaction_type"] = df["transaction_type"].replace(legacy_type_map)
-
-                df = assign_sequential_ids(df)
-
-                if not df.equals(raw_df):
-                    df.to_csv(data_path, index=False)
-                return df
-            except Exception:
-                print(f"Error loading or processing collated data: {exc}")
-                return pd.DataFrame(columns=columns)
-
-        df = pd.DataFrame(columns=columns)
-        df.to_csv(data_path, index=False)
-        return df
-
-        
-    except (OSError, ValueError, pd.errors.ParserError, UnicodeDecodeError) as exc:
-        st.error(
-            "Unable to load transaction data. "
-            "Please check whether the data file exists "
-            "and is readable and correctly formatted."
-        )
-        print(f"Error loading transaction data: {exc}")
-
-        return pd.DataFrame(columns=columns)
-
-
-def save_collated_data(new_records: List[Dict[str, Any]]) -> pd.DataFrame:
-    """Append new standardized records to the CSV and return the updated DataFrame."""
-    existing_df = load_collated_data()
-    new_df = pd.DataFrame(new_records, columns=columns)
-    new_df["transaction_id"] = ""  # real IDs are assigned below
-
-    combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-    combined_df = assign_sequential_ids(combined_df)
-    combined_df.to_csv(data_path, index=False)
-    return combined_df
-
-def update_collated_data(updated_df: pd.DataFrame) -> pd.DataFrame:
-    """Overwrite data file with modified DataFrame while ensuring sequential IDs."""
-    updated_df = updated_df[columns].copy()
-    updated_df = assign_sequential_ids(updated_df)
-    updated_df.to_csv(data_path, index=False)
-    return updated_df
-
 #-----------------------------------------------------------------------------------#
 #Establish Streamlit page configuration and API key handling
 
@@ -284,17 +125,6 @@ with tab1:
                     if not str(r.get("transaction_id", "")).startswith(fallback_id_prefix)
                 ]
                 failed_count = len(standardized_records) - len(good_records)
-
-                # Validate records that passed the above error check
-                good_records, validation_errors = validate_transactions(good_records)
-
-                failed_count += len(validation_errors)
-
-                if validation_errors:
-                    st.warning(
-                        f"{len(validation_errors)} additional record(s) "
-                        "failed validation and were not saved."
-                    )
 
                 if good_records:
                     df = save_collated_data(good_records)
@@ -493,29 +323,17 @@ with tab2:
                 else:
                     final_add_cat = selected_add_cat
 
-                # Check required fields have input
-                if not final_add_cat.strip():
-                    st.error("Please provide a category.")
-
-                elif not add_retailer.strip():
-                    st.error("Please provide a retailer name.")
-
-                elif add_amount <= 0:
-                    st.error("Amount must be greater than zero.")
-
-                else:
-
-                    new_rec = {
-                        "transaction_id": "",
-                        "date_and_time": f"{add_date} 00:00:00",
-                        "retailer": add_retailer.strip(),
-                        "category": final_add_cat,
-                        "transaction_amount": float(add_amount),
-                        "transaction_type": add_type,
-                    }
-                    df = save_collated_data([new_rec])
-                    st.success("New transaction successfully recorded!")
-                    st.rerun()
+                new_rec = {
+                    "transaction_id": "",
+                    "date_and_time": f"{add_date} 00:00:00",
+                    "retailer": add_retailer.strip(),
+                    "category": final_add_cat,
+                    "transaction_amount": float(add_amount),
+                    "transaction_type": add_type,
+                }
+                df = save_collated_data([new_rec])
+                st.success("New transaction successfully recorded!")
+                st.rerun()
 
         elif action == "✏️ Edit / Archive Existing Transaction":
             if df.empty:
@@ -568,20 +386,7 @@ with tab2:
                     with st.form("edit_transaction_form"):
                         col1, col2 = st.columns(2)
                         with col1:
-                            # safe conversion in case existing transaction has invalid date
-                            parsed_date = pd.to_datetime(
-                                selected_row["date_and_time"],
-                                errors="coerce"
-                            )
-
-                            if pd.isna(parsed_date):
-                                edit_date_val = pd.Timestamp.today().date()
-                                st.warning(
-                                    "This transaction has an invalid date. "
-                                    "Please select the correct date before updating it."
-                                )
-                            else:
-                                edit_date_val = parsed_date.date()
+                            edit_date_val = pd.to_datetime(selected_row["date_and_time"]).date()
                             edit_date = st.date_input("Date", value=edit_date_val)
                             edit_type = st.selectbox(
                                 "Type",
@@ -604,45 +409,41 @@ with tab2:
                             submit_delete = st.form_submit_button("Archive Transaction")
 
                     if submit_edit:
-                        if not edit_retailer.strip():
-                            st.error("Please provide a retailer name.")
-
-                        else:
                         # Determine final category logic
-                            if is_custom:
-                                if not custom_cat_val:
-                                    st.error("❌ Please provide a name for the custom category.")
-                                    st.stop()
-                                elif custom_cat_val not in allowed_categories and not confirm_new_cat:
-                                    st.error(
-                                        f"❌ Update blocked: **'{custom_cat_val}'** is not a registered category. "
-                                        "Please check the confirmation box above to proceed with adding it as a new custom category."
-                                    )
-                                    st.stop()
-                                else:
-                                    final_cat = custom_cat_val
+                        if is_custom:
+                            if not custom_cat_val:
+                                st.error("❌ Please provide a name for the custom category.")
+                                st.stop()
+                            elif custom_cat_val not in allowed_categories and not confirm_new_cat:
+                                st.error(
+                                    f"❌ Update blocked: **'{custom_cat_val}'** is not a registered category. "
+                                    "Please check the confirmation box above to proceed with adding it as a new custom category."
+                                )
+                                st.stop()
                             else:
-                                final_cat = selected_cat_option
+                                final_cat = custom_cat_val
+                        else:
+                            final_cat = selected_cat_option
 
-                            # Save updates
-                            df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
-                            df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
-                            df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
-                            df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
-                            df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+                        # Save updates
+                        df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
+                        df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
+                        df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
+                        df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
+                        df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
 
-                            new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
-                            # Save the edit to the audit trail
-                            record_audit(
-                                transaction_id=selected_id,
-                                action="EDIT",
-                                old_data=old_transaction,
-                                new_data=new_transaction,
-                            )
+                        new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
+                        # Save the edit to the audit trail
+                        record_audit(
+                            transaction_id=selected_id,
+                            action="EDIT",
+                            old_data=old_transaction,
+                            new_data=new_transaction,
+                        )
 
-                            df = update_collated_data(df)
-                            st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
-                            st.rerun()
+                        df = update_collated_data(df)
+                        st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
+                        st.rerun()
 
                     if submit_delete:
                         old_transaction = selected_row.to_dict()
@@ -664,18 +465,8 @@ with tab2:
 
     audit_df = load_audit_trail()
 
-    if audit_path.exists():
-        try:
-            audit_df = pd.read_csv(audit_path)
-            st.dataframe(audit_df, hide_index=True)
-
-        except (OSError, pd.errors.ParserError,
-                UnicodeDecodeError) as exc:
-            st.error(
-                "Unable to load the audit trail. "
-                "The audit file may be damaged or inaccessible."
-            )
-            print(f"Audit trail read error: {exc}")
+    if not audit_df.empty:
+        st.dataframe(audit_df, hide_index=True)
     else:
         st.info("No audit records yet.")
 
@@ -684,118 +475,74 @@ with tab2:
     with st.form("Recommend"):
         current_balance = st.text_input("Current Balance:")
         monthly_income = st.text_input("Monthly Income:")
-        include_misc = st.checkbox(
-            "Include Misc in discretionary spending calculation",
-            value=False
-        )
         submitted_rec = st.form_submit_button("Generate")
 
     if submitted_rec:
         if df.empty:
-            st.warning("No transaction data is available.")
-        elif not current_balance.strip() or not monthly_income.strip():
-            st.warning("Please fill in both fields.")
+            st.warning("Dataframe is empty!")
+        elif current_balance == "" or monthly_income == "":
+            st.warning("Please fill up both fields!")
         else:
             try:
-                curr_bal = float(current_balance.strip())
-                m_inc = float(monthly_income.strip())
+                curr_bal = float(current_balance)
+                m_inc = float(monthly_income)
 
-                if not math.isfinite(curr_bal) or not math.isfinite(m_inc):
-                    st.error("Please enter finite numerical amounts.")
-                elif m_inc < 0:
-                    st.error("Monthly income cannot be negative.")
-                elif curr_bal < 0:
-                    st.error(
-                        "Please enter a non-negative balance."
+                st.success("Generating response!")
+
+                outgoing_all = df[df["transaction_type"] == "Outgoing"].copy()
+
+                outgoing_all["transaction_amount"] = pd.to_numeric(
+                    outgoing_all["transaction_amount"],
+                    errors="coerce"
+                ).fillna(0)
+                
+                total_expenses = pd.to_numeric(
+                    outgoing_all["transaction_amount"], errors="coerce"
+                ).sum()
+
+                discretionary_alert = excessive_discretionary_spending(
+                    m_inc, df, include_misc=False
+                )
+
+                bills_alert = high_bills_burden(m_inc, df)
+
+                st.subheader("Assessment Summary")
+                st.write(f"• **Reported Monthly Income**: S$ {m_inc:,.2f}")
+                st.write(f"• **Current Balance**: S$ {curr_bal:,.2f}")
+                st.write(f"• **Total Recorded Expenses**: S$ {total_expenses:,.2f}")
+
+                if total_expenses > m_inc:
+                    st.warning(
+                        "⚠️ **Cash-Flow Risk**: Expenses exceed monthly income. "
+                        "Consider curbing discretionary spending."
                     )
                 else:
-
-                    st.success("Generating response!")
-                    #limit to current/latest date(in the records) for recommendations rather than every recorded transactions
-                    transaction_dates = pd.to_datetime(
-                        df["date_and_time"],
-                        errors="coerce",
-                        format="mixed"
+                    st.success(
+                        "✅ **Healthy Cash Flow**: Spending remains within monthly income bounds."
                     )
 
-                    valid_dates = transaction_dates.dropna()
+                if curr_bal < (3 * total_expenses):
+                    st.warning(
+                        "⚠️ **Emergency Reserve Alert**: Current balance is below "
+                        "the recommended 3-month expense threshold."
+                    )
+                else:
+                    st.success(
+                        "✅ **Adequate Safety Net**: Emergency reserves meet recommended guidelines."
+                    )
+                # discretionary-spending rule
+                if discretionary_alert:
+                    st.warning(
+                        "⚠️ **High Discretionary Spending**: "
+                        "Discretionary spending exceeds 50% of monthly income."
+                    )
 
-                    if valid_dates.empty:
-                        st.warning(
-                            "Cannot generate monthly recommendations "
-                            "because no valid transaction dates were found."
-                        )
-                    else:
-                        latest_period = valid_dates.dt.to_period("M").max()
-
-                        # Keep only transactions from the latest month
-                        monthly_df = df.loc[
-                            transaction_dates.dt.to_period("M") == latest_period
-                        ].copy()
-
-                        st.caption(
-                            f"Monthly recommendations based on "
-                            f"{latest_period.strftime('%B %Y')} transactions."
-                        )
-
-                    
-                        outgoing_all = monthly_df[
-                            monthly_df["transaction_type"] == "Outgoing"
-                        ].copy()
-
-                        outgoing_all["transaction_amount"] = pd.to_numeric(
-                            outgoing_all["transaction_amount"],
-                            errors="coerce"
-                        ).fillna(0)
-
-                        total_expenses = outgoing_all["transaction_amount"].sum()
-
-
-                        discretionary_alert = excessive_discretionary_spending(
-                            m_inc, monthly_df, include_misc=include_misc
-                        )
-
-                        bills_alert = high_bills_burden(
-                            m_inc, monthly_df
-                        )
-
-                        st.subheader("Assessment Summary")
-                        st.write(f"• **Reported Monthly Income**: S$ {m_inc:,.2f}")
-                        st.write(f"• **Current Balance**: S$ {curr_bal:,.2f}")
-                        st.write(f"• **Total Recorded Expenses**: S$ {total_expenses:,.2f}")
-
-                        if total_expenses > m_inc:
-                            st.warning(
-                                "⚠️ **Cash-Flow Risk**: Expenses exceed monthly income. "
-                                "Consider curbing discretionary spending."
-                            )
-                        else:
-                            st.success(
-                                "✅ **Healthy Cash Flow**: Spending remains within monthly income bounds."
-                            )
-
-                        if curr_bal < (3 * total_expenses):
-                            st.warning(
-                                "⚠️ **Emergency Reserve Alert**: Current balance is below "
-                                "the recommended 3-month expense threshold."
-                            )
-                        else:
-                            st.success(
-                                "✅ **Adequate Safety Net**: Emergency reserves meet recommended guidelines."
-                            )
-                        # discretionary-spending rule
-                        if discretionary_alert:
-                            st.warning(
-                                "⚠️ **High Discretionary Spending**: "
-                                "Discretionary spending exceeds 50% of monthly income."
-                            )
-
-                        # the high bills rule
-                        if bills_alert:
-                            st.warning(
-                                "⚠️ **High Bills Burden**: "
-                                "Bills spending exceeds 5% of monthly income."
-                            )
+                # the high bills rule
+                if bills_alert:
+                    st.warning(
+                        "⚠️ **High Bills Burden**: "
+                        "Bills spending exceeds 5% of monthly income."
+                    )
 
             except ValueError:
                 st.error(
