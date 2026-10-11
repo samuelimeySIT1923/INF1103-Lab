@@ -2,7 +2,6 @@ import calendar
 import csv
 import json
 import os
-from pathlib import Path
 from typing import Any, Dict, List
 import math
 
@@ -12,30 +11,21 @@ import pypdf
 import streamlit as st
 
 from ai_manager import  extract_batch_standardized_transactions, allowed_categories
-from data_manager import record_audit
+from data_manager import (
+    columns,
+    fallback_id_prefix,
+    filter_records,
+    get_available_month_years,
+    load_audit_trail,
+    load_collated_data,
+    record_audit,
+    save_collated_data,
+    update_collated_data,
+)
 from logic_manager import (
     excessive_discretionary_spending,
     high_bills_burden,
 )
-
-#-----------------------------------------------------------------------------------#
-#Establish columns and data path for collated data
-
-columns = [
-    "transaction_id",
-    "date_and_time",
-    "retailer",
-    "category",
-    "transaction_amount",
-    "transaction_type",
-]
-
-data_path = Path("data/collated_data.csv")
-
-fallback_id_prefix = "TXN-ERR"
-id_width = 5
-legacy_type_map = {"Expense": "Outgoing", "Income": "Incoming"}
-
 
 #-----------------------------------------------------------------------------------#
 #Establish file parsing function for uploaded files
@@ -380,9 +370,7 @@ with tab2:
         #     month_idx = list(calendar.month_name).index(option)
         #     df_display = df_display[df_display["date"].dt.month == month_idx]
         
-        # New month dropdown selection to include month-years
-        df_display["month_period"] = df_display["date"].dt.to_period("M")
-
+       
         st.write("Dates found in transaction data:")
         st.dataframe(
             df[["transaction_id", "date_and_time"]],
@@ -395,13 +383,9 @@ with tab2:
         )
 
         # Get all distinct months, including their years
-        valid_months = sorted(
-            df_display["month_period"].dropna().unique()
-        )
-
         month_lookup = {
-            period.strftime("%B %Y"): period
-            for period in valid_months
+            f"{calendar.month_name[month]} {year}": (year, month)
+            for year, month in get_available_month_years(df_display)
         }
 
         selectbox_list = ["All"] + list(month_lookup.keys())
@@ -410,10 +394,10 @@ with tab2:
 
         # Filter by the exact month AND year
         if option != "All":
-            selected_period = month_lookup[option]
-            df_display = df_display[
-                df_display["month_period"] == selected_period
-            ]
+            selected_year, selected_month = month_lookup[option]
+            df_display = filter_records(
+                df_display, month=selected_month, year=selected_year
+            )
 
 
         table_tab, bar_tab, line_tab = st.tabs(
@@ -678,7 +662,7 @@ with tab2:
 # Displaying the Audit trail from csv
     st.subheader("Audit Trail")
 
-    audit_path = Path("data/audit_trail.csv")
+    audit_df = load_audit_trail()
 
     if audit_path.exists():
         try:

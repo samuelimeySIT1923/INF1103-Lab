@@ -21,7 +21,7 @@ def excessive_discretionary_spending(
         monthly_income, df, include_misc=False
 ):
     df = df.copy()
-    #convert to numbers n kep yhe outgoing transactions
+    #convert to numbers n keep the outgoing transactions
     df["transaction_amount"]=pd.to_numeric(
         df["transaction_amount"], errors="coerce"
     ).fillna(0)
