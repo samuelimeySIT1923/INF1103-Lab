@@ -62,7 +62,35 @@ def high_bills_burden(monthly_income, df):
 
 
 #Emergency-fund inadequacy	Savings < 3 x Saverage monthly essential expenses	Lack of safety net, face risk if there is no inflow of cash.	Advice to save 3-6 months of essentials as emergency funds.
+essential_categories = {"food", "groceries", "transport", "bills"}
 
+
+def average_monthly_essential_expenses(df: pd.DataFrame) -> float:
+    """Return the average essential spending per month, across the months that have records."""
+    df = df.copy()
+    df["transaction_amount"] = pd.to_numeric(
+        df["transaction_amount"], errors="coerce"
+    ).fillna(0)
+
+    dates = pd.to_datetime(df["date_and_time"], errors="coerce", format="mixed")
+    month_count = dates.dt.to_period("M").nunique()
+    if month_count == 0:
+        return 0.0
+
+    categories = df["category"].astype(str).str.strip().str.lower()
+    essentials = df[
+        (df["transaction_type"] == "Outgoing")
+        & categories.isin(essential_categories)
+    ]
+
+    return float(essentials["transaction_amount"].sum() / month_count)
+
+
+def emergency_fund_inadequate(
+        savings: float, df: pd.DataFrame, months_required: int = 3
+) -> bool:
+    """Flag when savings cover less than `months_required` months of essential expenses."""
+    return savings < months_required * average_monthly_essential_expenses(df)
 
 #Irregular Income Flag	Income Variance > 20% month-to-month	Part-timers with fluctuating cash flow	Advice on flexible budgeting/financial buffers.
 #<Focus>
