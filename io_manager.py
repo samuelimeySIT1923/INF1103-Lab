@@ -22,6 +22,8 @@ from data_manager import (
     update_collated_data,
 )
 from logic_manager import (
+    average_monthly_essential_expenses,
+    emergency_fund_inadequate,
     excessive_discretionary_spending,
     high_bills_burden,
 )
@@ -521,10 +523,14 @@ with tab2:
                         "✅ **Healthy Cash Flow**: Spending remains within monthly income bounds."
                     )
 
-                if curr_bal < (3 * total_expenses):
+                avg_essentials = average_monthly_essential_expenses(df)
+                st.write(f"• **Average Monthly Essential Expenses**: S$ {avg_essentials:,.2f}")
+
+                if emergency_fund_inadequate(curr_bal, df):
                     st.warning(
                         "⚠️ **Emergency Reserve Alert**: Current balance is below "
-                        "the recommended 3-month expense threshold."
+                        "3 months of essential expenses "
+                        f"(S$ {3 * avg_essentials:,.2f}). Aim to save 3-6 months of essentials."
                     )
                 else:
                     st.success(
