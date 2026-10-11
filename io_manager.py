@@ -3,6 +3,7 @@ import csv
 import json
 import os
 from typing import Any, Dict, List
+import math
 
 import pandas as pd
 import plotly.express as px
@@ -317,9 +318,16 @@ with tab2:
                 submit_add = st.form_submit_button("Save Transaction")
 
             if submit_add:
+                if not add_retailer.strip():
+                    st.error("Please provide a retailer name.")
+                    st.stop()
+
+                if selected_add_cat == "+ Custom Category..." and not custom_cat_input.strip():
+                    st.error("Please provide a name for the custom category.")
+                    st.stop()
                 if selected_add_cat == "+ Custom Category...":
                     cat_value = custom_cat_input.strip()
-                    final_add_cat = cat_value.title() if cat_value else "Misc"
+                    final_add_cat = cat_value.title()
                 else:
                     final_add_cat = selected_add_cat
 
@@ -409,6 +417,9 @@ with tab2:
                             submit_delete = st.form_submit_button("Archive Transaction")
 
                     if submit_edit:
+                        if not edit_retailer.strip():
+                            st.error("Please provide a retailer name.")
+                            st.stop()
                         # Determine final category logic
                         if is_custom:
                             if not custom_cat_val:
@@ -475,6 +486,7 @@ with tab2:
     with st.form("Recommend"):
         current_balance = st.text_input("Current Balance:")
         monthly_income = st.text_input("Monthly Income:")
+        include_misc = st.checkbox("Include Misc in discretionary spending calculation", value=False)
         submitted_rec = st.form_submit_button("Generate")
 
     if submitted_rec:
@@ -484,8 +496,18 @@ with tab2:
             st.warning("Please fill up both fields!")
         else:
             try:
-                curr_bal = float(current_balance)
-                m_inc = float(monthly_income)
+                curr_bal = float(current_balance.strip())
+                m_inc = float(monthly_income.strip())
+
+                if not math.isfinite(curr_bal) or not math.isfinite(m_inc):
+                    st.error("Please enter finite numerical amounts for both fields.")
+                    st.stop()
+
+                if curr_bal < 0 or m_inc <= 0:
+                    st.error(
+                        "Current Balance cannot be negative, and Monthly Income must be greater than zero."
+                    )
+                    st.stop()
 
                 st.success("Generating response!")
 
@@ -500,11 +522,40 @@ with tab2:
                     outgoing_all["transaction_amount"], errors="coerce"
                 ).sum()
 
-                discretionary_alert = excessive_discretionary_spending(
-                    m_inc, df, include_misc=False
+                # Filter for recommendation calculations to look at monthly recommendations.
+
+                if option == "All":
+                    st.error(
+                        "Please select a specific month and year from the Month dropdown "
+                        "to generate the monthly assessment."
+                    )
+                    st.stop()
+
+                selected_year, selected_month = month_lookup[option]
+
+                monthly_df = filter_records(
+                    df,
+                    month=selected_month,
+                    year=selected_year
                 )
 
-                bills_alert = high_bills_burden(m_inc, df)
+                outgoing_all = monthly_df[
+                    monthly_df["transaction_type"] == "Outgoing"
+                ].copy()
+
+                outgoing_all["transaction_amount"] = pd.to_numeric(
+                    outgoing_all["transaction_amount"],
+                    errors="coerce"
+                ).fillna(0)
+
+                total_expenses = outgoing_all["transaction_amount"].sum()
+
+                # Run both business rules using only the selected month
+                discretionary_alert = excessive_discretionary_spending(
+                    m_inc, monthly_df, include_misc=include_misc
+                )
+
+                bills_alert = high_bills_burden(m_inc, monthly_df)
 
                 st.subheader("Assessment Summary")
                 st.write(f"• **Reported Monthly Income**: S$ {m_inc:,.2f}")
