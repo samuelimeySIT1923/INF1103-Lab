@@ -408,7 +408,6 @@ with tab2:
                         with col2:
                             edit_amount = st.number_input(
                                 "Amount (S$)",
-                                min_value=0.01,
                                 value=float(selected_row["transaction_amount"]),
                                 step=1.0,
                                 format="%.2f"
@@ -420,8 +419,12 @@ with tab2:
                             submit_delete = st.form_submit_button("Archive Transaction")
 
                     if submit_edit:
+                        #st.write("DEBUG: Update button submitted")
                         if not edit_retailer.strip():
                             st.error("Please provide a retailer name.")
+
+                        elif edit_amount <= 0:
+                            st.error("Amount must be greater than zero.")
                             
                         # Determine final category logic
                         elif is_custom and not custom_cat_val:
@@ -465,6 +468,7 @@ with tab2:
                             st.rerun()
 
                     if submit_delete:
+                        #st.write("DEBUG: Archive button submitted")
                         old_transaction = selected_row.to_dict()
                         record_audit(
                             transaction_id=selected_id,
