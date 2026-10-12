@@ -10,7 +10,7 @@ import plotly.express as px
 import pypdf
 import streamlit as st
 
-from ai_manager import  extract_batch_standardized_transactions, allowed_categories
+from ai_manager import  extract_batch_standardized_transactions, extract_transaction_from_media, allowed_categories
 from data_manager import (
     columns,
     fallback_id_prefix,
@@ -105,48 +105,63 @@ with tab1:
         elif not api_key:
             st.warning("Please enter your Gemini API key in the sidebar to process uploads!")
         else:
-            raw_items = []
-            for file in file_uploaded:
-                raw_items.extend(parse_uploaded_file(file))
+            text_records = []
+            all_standardized = []
 
-            if not raw_items:
-                st.warning(
-                    "No readable transactions could be extracted from the uploaded file(s)."
-                )
-            else:
-                st.info(
-                    f"Submitted {len(raw_items)} rows of raw records."
-                )
+            with st.spinner("Processing uploaded files..."):
+                for file in file_uploaded:
+                    fname = file.name.lower()
 
-                with st.spinner(f"Processing {len(raw_items)} rows of data..."):
-                    standardized_records = extract_batch_standardized_transactions(
-                        raw_items, api_key
-                    )
+                    # Branch 1: CSV and JSON files
+                    if fname.endswith((".csv", ".json")):
+                        text_records.extend(parse_uploaded_file(file))
 
-                good_records = [
-                    r for r in standardized_records
-                    if not str(r.get("transaction_id", "")).startswith(fallback_id_prefix)
-                ]
-                failed_count = len(standardized_records) - len(good_records)
+                    # Branch 2: PDF and Image files
+                    elif fname.endswith((".pdf", ".png", ".jpg", ".jpeg")):
+                        file_bytes = file.getvalue()
+                        
+                        # Determine MIME type
+                        if fname.endswith(".pdf"):
+                            mime_type = "application/pdf"
+                        elif fname.endswith(".png"):
+                            mime_type = "image/png"
+                        else:
+                            mime_type = "image/jpeg"
 
-                if good_records:
-                    df = save_collated_data(good_records)
-                    st.success(
-                        "File(s) successfully uploaded and standardized "
-                        f"({len(good_records)} records processed)!"
-                    )
-                    st.dataframe(df.tail(len(good_records))[columns], hide_index=True)
-                    if failed_count:
-                        st.warning(
-                            f"{failed_count} record(s) could not be parsed and were not saved. "
-                            "Check the terminal logs for details."
+                        media_results = extract_transaction_from_media(
+                            file_bytes=file_bytes,
+                            mime_type=mime_type,
+                            api_key=api_key,
                         )
-                else:
-                    st.error(
-                        f"Gemini extraction failed for all {failed_count} records, "
-                        "so nothing was saved. If the terminal shows 503 UNAVAILABLE, Gemini is "
-                        "temporarily overloaded - wait a few minutes and upload again."
+                        all_standardized.extend(media_results)
+
+                # Process collected CSV/JSON records in batch
+                if text_records:
+                    batch_results = extract_batch_standardized_transactions(
+                        text_records, api_key
                     )
+                    all_standardized.extend(batch_results)
+
+            # Filter out fallbacks and save valid records
+            good_records = [
+                r for r in all_standardized
+                if not str(r.get("transaction_id", "")).startswith(fallback_id_prefix)
+            ]
+            failed_count = len(all_standardized) - len(good_records)
+
+            if good_records:
+                df = save_collated_data(good_records)
+                st.success(
+                    f"File(s) successfully uploaded and processed "
+                    f"({len(good_records)} records extracted)!"
+                )
+                st.dataframe(df.tail(len(good_records))[columns], hide_index=True)
+                if failed_count:
+                    st.warning(
+                        f"{failed_count} record(s) could not be parsed and were not saved."
+                    )
+            else:
+                st.error("No valid records could be extracted from the uploaded file(s).")
     st.divider()
     st.download_button(
         label="Download File (CSV)",
