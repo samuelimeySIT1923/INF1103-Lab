@@ -4,12 +4,14 @@ import pandas as pd
 def cashflow_risk_rule(df, planned_expenses=0):
     df = df.copy()
     df['date_and_time'] = pd.to_datetime(df['date_and_time'])
+
     latest_date = df['date_and_time'].max()
     last_30_days = df[df['date_and_time'] > latest_date - pd.Timedelta(days=30)]
+
     inflow = last_30_days[last_30_days['transaction_type'] == 'Incoming']['transaction_amount'].sum()
     outflow = last_30_days[last_30_days['transaction_type'] == 'Outgoing']['transaction_amount'].sum()
     projected_net_cashflow = inflow - outflow - planned_expenses
-    #print(projected_net_cashflow)
+
     if projected_net_cashflow < 0:
         return True
     else:
@@ -17,29 +19,29 @@ def cashflow_risk_rule(df, planned_expenses=0):
 
 
 #High Debt Burden	Total Monthly Debt repayments > 30% of monthly income	Student loans/debts limiting savings and increases stress	Advice refinancing or reaching out to financial assistance.
-# def excessive_discretionary_spending(
-#         monthly_income, df, include_misc=False
-# ):
-#     df = df.copy()
-#     #convert to numbers n keep the outgoing transactions
-#     df["transaction_amount"]=pd.to_numeric(
-#         df["transaction_amount"], errors="coerce"
-#     ).fillna(0)
-#     outgoing = df[df["transaction_type"]=="Outgoing"]
+def excessive_discretionary_spending(
+        monthly_income, df, include_misc=False
+):
+    df = df.copy()
+    #convert to numbers n keep the outgoing transactions
+    df["transaction_amount"]=pd.to_numeric(
+        df["transaction_amount"], errors="coerce"
+    ).fillna(0)
+    outgoing = df[df["transaction_type"]=="Outgoing"]
 
-#     #find discretionary cats
-#     discretionary_categories = {"entertainment", "shopping"}
-#     if include_misc:
-#         discretionary_categories.add("misc")
-#     categories = outgoing["category"].astype(str).str.strip().str.lower()
-#     discretionary_spending = outgoing.loc[
-#         categories.isin(discretionary_categories),
-#         "transaction_amount"
-#     ].sum()
-#     if monthly_income <= 0:
-#         return False
+    #find discretionary cats
+    discretionary_categories = {"entertainment", "shopping"}
+    if include_misc:
+        discretionary_categories.add("misc")
+    categories = outgoing["category"].astype(str).str.strip().str.lower()
+    discretionary_spending = outgoing.loc[
+        categories.isin(discretionary_categories),
+        "transaction_amount"
+    ].sum()
+    if monthly_income <= 0:
+        return False
 
-#     return discretionary_spending > monthly_income * 0.50
+    return discretionary_spending > monthly_income * 0.50
 
 #Business Rule 2: High Bills Burden	Monthly bills > 5% of monthly income	High bills burden limits savings and increases stress	Advice to reduce bills (eg. switch telco, electricity, insurance)
 def high_bills_burden(monthly_income, df):
