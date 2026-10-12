@@ -1,39 +1,68 @@
 import difflib
-from string.templatelib import convert
-
-#Pls install nltk library if not already installed via cmd or terminal using the command [windows+R > cmd] below:
-# pip install nltk
 import nltk
-
-from test import words_are_similar
-nltk.download('wordnet')
+from string.templatelib import convert
 from nltk.corpus import wordnet
+nltk.download("wordnet", quiet=True)
 
-dataBase = []
-categoryType = ["groceries", "food & drink", "entertainment", "transport", "bills", "others"]
+#1. Call any input with unknown category (Categories: Misc) in Array table
+#2. User input description and save to new column
+#3. Match words in description with listed category
+#   1. If match, change “Misc” to said category
+#   2. Else, Check if user still wants to keep it at Misc Category
+#      1. If Yes, save Description and keep as Misc
+#      2. If no, ask to re-enter description
 
-errrorCheck = None
-#Naming Convention
+# Naming Convention
 # lower full - definition
 # 1st lower and rest Uppper no underscore - system variables
 # 1st lower and rest Uppper with underscore - ???
 # Full Upper no underscore - user input
+# Full Upper with Underscroe - Stored Arrays
 
-def callcategory(EntryCategory):
-        if EntryCategory.lower() not in categoryType:
-            print("Invalid EntryCategory. EntryCategory pushed to Others.")
-            EntryCategory = "others"
-        return EntryCategory
+ALL_KNOWN_CATEGORIES = {}
+FULL_TABLE = []
+MISC_TABLE = []
 
-def inflowoutflowcheck(TransactionType):
+#Function 1A: Sort any item with invalid categories into "Misc"
+def assignmisc(rows):
+    for row in rows:
+        if row.get("category") not in ALL_KNOWN_CATEGORIES: #To includ array of defined categories
+            row["category"] = "Misc"
+    return rows
+
+#Function 1B: Call any rows with Misc Categories
+def getmisc(rows):
+    """Return all rows categorized as 'Misc'."""
+    return [row.copy() for row in rows if row["category"] == "Misc"]
+
+#Function 2A: For any rows with Description "Misc", ask for user input
+def adddescription(rows):
+    for row in rows:
+        row["description"] = input(f"Describle '{row['Input']}': ").strip()
+    return rows
+
+assignmisc(FULL_TABLE)
+MISC_TABLE = getmisc(FULL_TABLE)
+adddescription(MISC_TABLE)
+
+#Way to view and print out misc table rows
+for row in getmisc(FULL_TABLE):
+    print(row)
+
+#once done with table, reset table to blank state
+MISC_TABLE.clear()
+
+#[Shelved Function]
+#def inoutflowcheck(TransactionType):
     if TransactionType.lower() == 'inflow':
         return True
     elif TransactionType.lower() == 'outflow':
         return False
     else:
         return None
-    
-def swaptransaction(TransactionType, changetransaction):
+
+#[Shelved Function]
+#def swaptransaction(TransactionType, changetransaction): 
     if TransactionType.lower() == 'outflow':
         userInput = input("Do you want to swap to a Inflow Transaction? Clicking 'n' will void input. (y/n) ").strip().lower()
         if userInput == 'y':
@@ -53,13 +82,7 @@ def swaptransaction(TransactionType, changetransaction):
             print("Invalid input. Please enter 'y' or 'n'.")
             return swaptransaction()  # Recursively call until valid input is received
 
-import nltk
-from nltk.corpus import wordnet
-
-nltk.download("wordnet", quiet=True)
-
-categoryType = list(CATEGORIES)   # or your own list, e.g. ["Food", "Transport", ...]
-
+#        
 def match_category(description, threshold=0.5):
     """Return the category most similar to any word in the description, or None."""
     words = description.lower().split()
@@ -85,7 +108,6 @@ def match_category(description, threshold=0.5):
         return best_category
     return None
 
-
 def match_category(description):
     """Return the first category whose name or keywords appear in the description."""
     words = set(description.lower().split())
@@ -93,6 +115,7 @@ def match_category(description):
         if category.lower() in words or words & set(keywords):
             return category
     return None
+
 
 def resolve_misc(table):
     for row in table:
@@ -141,6 +164,14 @@ def lookupDescription(Description):
             print(f"'{Description}' matches category '{category}'")
             return category
 
+from test import words_are_similar
+nltk.download('wordnet')
+from nltk.corpus import wordnet
+
+dataBase = []
+categoryType = ["groceries", "food & drink", "entertainment", "transport", "bills", "others"]
+
+errrorCheck = None
 
 
 resolve_misc(table)
