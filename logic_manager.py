@@ -125,13 +125,13 @@ def main(rows):
     print(f"Income std deviation:   {spread:.2f}")
     print(f"20% of average income:  {limit:.2f}")
     if avg == 0:
-        print("No income recorded, so the comparison isn't meaningful.")
+        #print("No income recorded, so the comparison isn't meaningful.")
         return None
     elif spread > limit:
-        print("<Irregular Income Flag> Income variability is MORE than 20% of average income.")
+        #print("<Irregular Income Flag> Income variability is MORE than 20% of average income. ")
         return True
     else:
-        print("Income variability is NOT more than 20% of average income.")
+        #print("Income variability is NOT more than 20% of average income.")
         return False
 
 if __name__ == "__main__":
@@ -152,19 +152,6 @@ def excessive_spending_rule(income,df):
      else:
          return False
 
-#Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
-def excessive_spending_rule(income,df):
-    cumulative_amount_spent = 0
-    for i in df['Category'].unique():
-        filtered_df = df[df['Category'] == i]
-        amt_spent = filtered_df["Amount"].sum()
-        if i not in ['Food','Transport','Bills']:
-            cumulative_amount_spent += amt_spent
-    print(cumulative_amount_spent)
-    if cumulative_amount_spent > (income*0.5):
-        return True
-    else:
-        return False
 
 # #Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
 
