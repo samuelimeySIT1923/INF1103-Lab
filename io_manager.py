@@ -94,7 +94,7 @@ with tab1:
         file_uploaded = st.file_uploader(
             "Upload",
             label_visibility="hidden",
-            type=["pdf", "csv", "json"],
+            type=["pdf", "csv", "json","png","jpg","jpeg"],
             accept_multiple_files=True,
         )
         submitted = st.form_submit_button("Submit")
