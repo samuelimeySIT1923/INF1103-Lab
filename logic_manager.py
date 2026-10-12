@@ -95,77 +95,44 @@ def emergency_fund_inadequate(
 from datetime import date
 from decimal import Decimal
 from statistics import pstdev
+THRESHOLD = Decimal("0.20")
 
-threshold = Decimal("0.20")
+#Def 1: get curent and last 2 months, return (year, month) strings [Newest 1st]
+def last_n_months(n=3):
+    today = date.today() #get today's date
+    base = today.year * 12 + today.month - 1 #turn date into single “months since year 0” number
+    return [(y, m + 1) for y, m in (divmod(base - i, 12) for i in range(n))]
+#divmod - divides number by 12 and return (quotient, remainder) which is (year,0-based month[0-11])
+#(y, m + 1) - add 1 back to conver the month to 1-12 range
 
-#Def 1: get curent and last 2 months, return MMYY strings [Newest 1st]
-def last_n_Months(n = 3) -> list[str]:  
-    today = date.today()
-    year, month = today.year, today.month #unpack month and year into 2 different intgers
-    keys = [] #list to collect MMYYYY Strings
-    for _ in range(n):
-        keys.append(f"{month:02d}{year}")
-        month -= 1
-        # roll back across the year boundary
-        if month == 0:                 
-            month, year = 12, year - 1
-    return keys
-
-#Def 2A: Get every Inflows amount recorded in given month
-def get_Inflows(mainRows: list[dict], mmyyyy: str) -> list[Decimal]:
-    month, year = int(mmyyyy[:2]), int(mmyyyy[2:])
-    return [
-        Decimal(str(row["amount"]))
-        for row in mainRows
-        if row["transaction_type"] == "Incoming"
-        and row["date"].month == month
-        and row["date"].year == year
-    ]
-
-#Def 2B: sum up all inflows by month
-def sum_Inflows_By_Month(mainRows: list[dict], keys: list[str]) -> dict[str, Decimal]:
-    totals = {} #get empty array
-    for key in keys: #For each MMYYYY
-        inflows = get_Inflows(mainRows, key)
-        #get all inflows in that month
-        totals[key] = sum(inflows, Decimal("0"))
-        # Tabulate the sum
+#Def 2: get curent and last 2 months, return MMYY strings [Newest 1st]
+def monthly_inflows(rows, months):
+    totals = dict.fromkeys(months, Decimal(0)) #Create "keys" for the selected month range
+    for r in rows: #for each transaction
+        key = (r["date_and_time"].year, r["date_and_time"].month) #Convert row's date into (year, month)
+        if r["transaction_type"] == "Incoming" and key in totals: #keep rows that are incoming + matches the "keys"
+            totals[key] += Decimal(str(r["amount"])) #add amount into particular month's runing total
     return totals
 
-#Def 3: Calculate Variability in income of past 3 months
-def income_Variability(monthlytotals: dict[str, Decimal]) -> tuple[Decimal, Decimal]:
-    values = list(monthlytotals.values())
-    avg = sum(values, Decimal("0")) / len(values)
-    spread = pstdev(values)  # population std dev; use stdev() for sample
-    return spread, avg  
-
-#Def 4: Calculate if Variability os more than 20% average monthly income
-def main(mainRows: list[dict]):
-    keys = last_n_Months(3) #call last 3 months
-    monthlytotals = sum_Inflows_By_Month(mainRows, keys) #get total inflow of each month
-
-    spread, avgincome = income_Variability(monthlytotals) #calculate income varability & average monthly income
-    limit = avgincome * threshold #calculate 20% of average monthly income
-
-    print(f"Average monthly income: {avgincome:.2f}")
+#Def 3: Calculate and determine variability
+def main(rows):
+    #get values of 
+    values = list(monthly_inflows(rows, last_n_months(3)).values()) #get total incoming of each month
+    avg = sum(values) / len(values) #get average incoming of each month
+    spread = pstdev(values)  #calculate income [incoming] varability
+    limit = avg * THRESHOLD #calculate X% of average monthly income
+    print(f"Average monthly income: {avg:.2f}")
     print(f"Income std deviation:   {spread:.2f}")
     print(f"20% of average income:  {limit:.2f}")
-
-    if avgincome == 0:
+    if avg == 0:
         print("No income recorded, so the comparison isn't meaningful.")
-        #if no income detected, cannot compare > exit
     elif spread > limit:
         print("<Irregular Income Flag> Income variability is MORE than 20% of average income.")
-        # if variability > 20% average income =  flag
     else:
         print("Income variability is NOT more than 20% of average income.")
-        # if variability <= 20% average income = No flag
 
 if __name__ == "__main__":
-    mainRows = [
-        #Call in real csv data {TO LINK}
-    ]
-    main(mainRows)
+    main([])  #Call in real csv data {TO LINK}
 
 
 #Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
@@ -182,19 +149,6 @@ def excessive_spending_rule(income,df):
      else:
          return False
 
-#Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
-def excessive_spending_rule(income,df):
-    cumulative_amount_spent = 0
-    for i in df['Category'].unique():
-        filtered_df = df[df['Category'] == i]
-        amt_spent = filtered_df["Amount"].sum()
-        if i not in ['Food','Transport','Bills']:
-            cumulative_amount_spent += amt_spent
-    print(cumulative_amount_spent)
-    if cumulative_amount_spent > (income*0.5):
-        return True
-    else:
-        return False
 
 # #Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
 
