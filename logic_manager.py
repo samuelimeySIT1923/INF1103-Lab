@@ -126,10 +126,13 @@ def main(rows):
     print(f"20% of average income:  {limit:.2f}")
     if avg == 0:
         print("No income recorded, so the comparison isn't meaningful.")
+        return None
     elif spread > limit:
         print("<Irregular Income Flag> Income variability is MORE than 20% of average income.")
+        return True
     else:
         print("Income variability is NOT more than 20% of average income.")
+        return False
 
 if __name__ == "__main__":
     main([])  #Call in real csv data {TO LINK}
