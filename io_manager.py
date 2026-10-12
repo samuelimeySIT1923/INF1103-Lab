@@ -161,7 +161,7 @@ with tab1:
 
 
 #-----------------------------------------------------------------------------------#
-#tab 2: Displaying data, graphs, and recommendations
+#tab 2: Displaying data, graphs, and recommendations 
 
 with tab2:
     st.title("Data & Graphs")
