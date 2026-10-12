@@ -193,6 +193,20 @@ Raw input records:
 {json.dumps(payload, indent=2, ensure_ascii=True)}
 """
 
+def build_media_prompt() -> str:
+    schema = _schema_text().replace(
+        '  "source_index": <the integer index of the input record>,\n', ""
+    )
+    return f"""You are an expert financial transaction extraction engine.
+Extract all transaction entries visible in this document or image.
+If there are multiple transactions, return a JSON ARRAY of objects. If there is only one, return a single JSON object.
+
+Each object MUST match this exact schema:
+{schema}
+
+{_rules}
+5. Output ONLY valid JSON matching the schema above.
+"""
 
 def build_single_prompt(raw_record: Any) -> str:
     schema = _schema_text().replace(
@@ -360,6 +374,51 @@ def extract_batch_standardized_transactions(
                 len(raw_records) - failed, failed)
     return output
 
+def extract_transaction_from_media(
+    file_bytes: bytes,
+    mime_type: str,
+    api_key: str,
+    model_name: str = default_model,
+) -> List[Dict[str, Any]]:
+    """Extract standardized transaction records directly from a PDF or image file."""
+    api_key = (api_key or "").strip()
+    client = genai.Client(api_key=api_key)
+    
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        thinking_config=types.ThinkingConfig(thinking_level="low"),
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+    )
+
+    # Wrap binary bytes in a Part object
+    media_part = types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+    prompt = build_media_prompt()
+
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[media_part, prompt],
+            config=config,
+        )
+        data = json.loads(response.text or "[]")
+        
+        # Ensure data is a list
+        if isinstance(data, dict):
+            data = [data]
+
+        valid_records = []
+        for item in data:
+            ok, msg = validate_schema(item)
+            if ok:
+                valid_records.append(_normalise(item))
+            else:
+                logger.warning("Media record failed validation: %s", msg)
+                
+        return valid_records if valid_records else [create_fallback_record({})]
+
+    except Exception:
+        logger.exception("Gemini media extraction call failed")
+        return [create_fallback_record({})]
 
 #-----------------------------------------------------------------------------------#
 #Establish single-record extraction function
