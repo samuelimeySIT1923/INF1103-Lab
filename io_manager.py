@@ -175,45 +175,45 @@ with tab2:
             errors="coerce",
             format="mixed"
         )
+        with st.expander("Debug: Inspect transaction dates"):
+            # error catch for invalid/unsupported dates
+            # to make nicer as error catch in future
+            invalid_dates = df_display[df_display["date"].isna()]
+
+            st.write("Number of invalid dates:", len(invalid_dates))
+            st.write("Examples of invalid date values:")
+            st.dataframe(
+                invalid_dates[["transaction_id", "date_and_time"]].head(20),
+                hide_index=True,
+            )
+
+            df_display["transaction_amount"] = pd.to_numeric(
+                df_display["transaction_amount"], errors="coerce"
+            ).fillna(0.0)
+            df_display = df_display.sort_values("date")
+
+            # selectbox_list = ["All"]
+            # valid_months = df_display["date"].dt.month.dropna().unique()
+            # for month_num in sorted(valid_months):
+            #     selectbox_list.append(calendar.month_name[int(month_num)])
+
+            # option = st.selectbox("Month", selectbox_list)
+
+            # if option != "All":
+            #     month_idx = list(calendar.month_name).index(option)
+            #     df_display = df_display[df_display["date"].dt.month == month_idx]
+            
         
-        # error catch for invalid/unsupported dates
-        # to make nicer as error catch in future
-        invalid_dates = df_display[df_display["date"].isna()]
+            st.write("Dates found in transaction data:")
+            st.dataframe(
+                df[["transaction_id", "date_and_time"]],
+                hide_index=True,
+            )
 
-        st.write("Number of invalid dates:", len(invalid_dates))
-        st.write("Examples of invalid date values:")
-        st.dataframe(
-            invalid_dates[["transaction_id", "date_and_time"]].head(20),
-            hide_index=True,
-        )
-
-        df_display["transaction_amount"] = pd.to_numeric(
-            df_display["transaction_amount"], errors="coerce"
-        ).fillna(0.0)
-        df_display = df_display.sort_values("date")
-
-        # selectbox_list = ["All"]
-        # valid_months = df_display["date"].dt.month.dropna().unique()
-        # for month_num in sorted(valid_months):
-        #     selectbox_list.append(calendar.month_name[int(month_num)])
-
-        # option = st.selectbox("Month", selectbox_list)
-
-        # if option != "All":
-        #     month_idx = list(calendar.month_name).index(option)
-        #     df_display = df_display[df_display["date"].dt.month == month_idx]
-        
-       
-        st.write("Dates found in transaction data:")
-        st.dataframe(
-            df[["transaction_id", "date_and_time"]],
-            hide_index=True,
-        )
-
-        st.write(
-            "Transactions with invalid dates:",
-            df_display["date"].isna().sum()
-        )
+            st.write(
+                "Transactions with invalid dates:",
+                df_display["date"].isna().sum()
+            )
 
         # Get all distinct months, including their years
         month_lookup = {
@@ -408,7 +408,6 @@ with tab2:
                         with col2:
                             edit_amount = st.number_input(
                                 "Amount (S$)",
-                                min_value=0.01,
                                 value=float(selected_row["transaction_amount"]),
                                 step=1.0,
                                 format="%.2f"
@@ -420,8 +419,12 @@ with tab2:
                             submit_delete = st.form_submit_button("Archive Transaction")
 
                     if submit_edit:
+                        #st.write("DEBUG: Update button submitted")
                         if not edit_retailer.strip():
                             st.error("Please provide a retailer name.")
+
+                        elif edit_amount <= 0:
+                            st.error("Amount must be greater than zero.")
                             
                         # Determine final category logic
                         elif is_custom and not custom_cat_val:
@@ -465,6 +468,7 @@ with tab2:
                             st.rerun()
 
                     if submit_delete:
+                        #st.write("DEBUG: Archive button submitted")
                         old_transaction = selected_row.to_dict()
                         record_audit(
                             transaction_id=selected_id,
