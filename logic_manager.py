@@ -90,7 +90,7 @@ def emergency_fund_inadequate(
     """Flag when savings cover less than `months_required` months of essential expenses."""
     return savings < months_required * average_monthly_essential_expenses(df)
 
-
+  
 #Irregular Income Flag	Income Variance > 20% month-to-month Income [Part-timers with fluctuating cash flow	Advice on flexible budgeting/financial buffers.]
 from datetime import date
 from decimal import Decimal
@@ -137,6 +137,20 @@ if __name__ == "__main__":
 
 #Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
 def excessive_spending_rule(income,df):
+     cumulative_amount_spent = 0
+     for i in df['Category'].unique():
+         filtered_df = df[df['Category'] == i]
+         amt_spent = filtered_df["Amount"].sum()
+         if i not in ['Food','Transport','Bills']:
+             cumulative_amount_spent += amt_spent
+     print(cumulative_amount_spent)
+     if cumulative_amount_spent > (income*0.5):
+         return True
+     else:
+         return False
+
+#Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
+def excessive_spending_rule(income,df):
     cumulative_amount_spent = 0
     for i in df['Category'].unique():
         filtered_df = df[df['Category'] == i]
@@ -149,8 +163,7 @@ def excessive_spending_rule(income,df):
     else:
         return False
 
+# #Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
 
-#Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
 
-
-#High Savings (Stagnant)	Savings [left in bank] > 80% of income 	Warning of limited financial growth	Advice reaching out to financial advisers / safer investment options (eg ETFs)
+# #High Savings (Stagnant)	Savings [left in bank] > 80% of income 	Warning of limited financial growth	Advice reaching out to financial advisers / safer investment options (eg ETFs)
