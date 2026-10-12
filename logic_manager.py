@@ -149,19 +149,6 @@ def excessive_spending_rule(income,df):
      else:
          return False
 
-#Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
-def excessive_spending_rule(income,df):
-    cumulative_amount_spent = 0
-    for i in df['Category'].unique():
-        filtered_df = df[df['Category'] == i]
-        amt_spent = filtered_df["Amount"].sum()
-        if i not in ['Food','Transport','Bills']:
-            cumulative_amount_spent += amt_spent
-    print(cumulative_amount_spent)
-    if cumulative_amount_spent > (income*0.5):
-        return True
-    else:
-        return False
 
 # #Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
 
