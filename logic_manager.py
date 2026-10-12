@@ -95,7 +95,6 @@ def emergency_fund_inadequate(
 from datetime import date
 from decimal import Decimal
 from statistics import pstdev
-
 THRESHOLD = Decimal("0.20")
 
 #Def 1: get curent and last 2 months, return (year, month) strings [Newest 1st]
