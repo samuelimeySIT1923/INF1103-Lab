@@ -2,24 +2,10 @@ import re
 import nltk
 import difflib
 from datetime import datetime
-from nltk.corpus import wordnet, stopwords
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import wordnet
 
 nltk.download("stopwords", quiet=True)
 nltk.download("wordnet", quiet=True)
-
-
-from string.templatelib import convert
-
-#1. Call any input with unknown category (Categories: Misc) in Array table
-#2. User input description and save to new column
-#3. Match words in description with listed category
-# a. If match, change “Misc” to said category
-# b. Else, Check if user still wants to keep it at Misc Category
-#  i. If Yes, save Description and keep as Misc
-#  ii. if no, say category not matched, pls retype & rephrase
-#4. Save edited rows back to main row
 
 # Naming Convention
 # lower full - definition
@@ -40,11 +26,14 @@ ALL_KNOWN_CATEGORIES = [
 FULL_TABLE = []
 MISC_TABLE = []
 
-#lookup table that store WordNet's meaning for each category
+#[For 3A] lookup table that store WordNet's meaning for each category
 CATEGORY_SYNSETS = {
     category: wordnet.synsets(category.lower(), pos=wordnet.NOUN)
     for category in ALL_KNOWN_CATEGORIES
 }
+
+#[For 3B] Array of every noun WordNet knows
+ALL_NOUNS = list(wordnet.all_lemma_names(pos=wordnet.NOUN))
 
 #Function 1A: Sort any item with invalid categories into "Misc"
 def assignmisc(mainRows):
@@ -58,10 +47,22 @@ def getmisc(mainRows):
     """Return all rows categorized as 'Misc'."""
     return [row.copy() for row in mainRows if row["category"] == "Misc"]
 
-#Function 3A: Return category most similar to word in description, or none
+#Function 3A: Fix Typo with Closest known words
+def fixtypo(word, cutoff=0.8):
+    if len(word) < 4:                    # Omit short words given too many false fixes
+        return word
+    if wordnet.synsets(word):            # WordNet knows word in any part of speech
+        return word
+    matches = difflib.get_close_matches(word, ALL_NOUNS, n=1, cutoff=cutoff)
+    if matches:
+        print(f"  (corrected '{word}' -> '{matches[0]}')") #declare autocorrected word
+        return matches[0]
+    return word
+
+#Function 3B: Return category most similar to word in description, or none
 def matchcategory(description, threshold=0.2): #treshold = level of acceptance to determine similarity of words
-    words = set(re.findall(r"[a-z]+", description.lower()))
-    
+    words = {fixtypo(word) for word in re.findall(r"[a-z]+", description.lower())}
+        
     bestCategory = None #temp variable to store closest category
     bestScore = 0 #temp variable to determine highscore of closest category
     
@@ -80,8 +81,8 @@ def matchcategory(description, threshold=0.2): #treshold = level of acceptance t
         print(f"'{description}' matches category '{bestCategory}' ({bestScore:.2f})") #Announce Description matches a category [List score - debugging]
         return bestCategory #return closest category
     return None #none if below threshold
-     
-#Function 3B: Accepting of User input [Y/N]
+
+#Function 3C: Accepting of User input [Y/N]
 def askyn(prompt):
     while True: #loop until return occurs [ie valid Y/N]
         answer = input(prompt).strip().lower()
@@ -91,8 +92,7 @@ def askyn(prompt):
             return False
         print("Please answer yes or no.")
 
-
-#Function 3C: Asking & Matching of Description
+#Function 3D: Asking & Matching of Description
 def processmiscrows(tempRows):
     for row in tempRows:
         while True: #ie Get 1 row with Misc Category
