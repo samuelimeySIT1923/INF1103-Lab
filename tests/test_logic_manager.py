@@ -61,3 +61,114 @@ def test_emergency_fund_not_flagged_with_no_essential_spending():
     df = sample_df()
     df = df[df["category"] == "Entertainment"]
     assert logic_manager.emergency_fund_inadequate(0.0, df) is False
+
+    
+
+# Cash-flow risk
+
+def test_cashflow_not_at_risk_when_income_covers_spending():
+    # Latest record is 12 Sep, so the last 30 days hold 2500 in and 500 + 100 + 400 out
+    assert not logic_manager.cashflow_risk_rule(sample_df())
+
+
+def test_cashflow_not_at_risk_when_planned_expenses_equal_surplus():
+    assert not logic_manager.cashflow_risk_rule(sample_df(), planned_expenses=1500)
+
+
+def test_cashflow_at_risk_when_planned_expenses_exceed_surplus():
+    assert logic_manager.cashflow_risk_rule(sample_df(), planned_expenses=1500.01)
+
+
+def test_cashflow_at_risk_when_spending_exceeds_income():
+    df = sample_df()
+    df = df[df["transaction_type"] == "Outgoing"]
+    assert logic_manager.cashflow_risk_rule(df)
+
+
+def test_cashflow_handles_unreadable_dates():
+    records = [dict(r, date_and_time="not a date") for r in sample_ai_records]
+    assert not logic_manager.cashflow_risk_rule(pd.DataFrame(records))
+
+
+# Excessive discretionary spending
+
+def test_discretionary_flagged_when_above_half_of_income():
+    # Discretionary spending is 500 (Entertainment); half of 900 is 450
+    assert logic_manager.excessive_discretionary_spending(900, sample_df())
+
+
+def test_discretionary_not_flagged_at_exactly_half_of_income():
+    assert not logic_manager.excessive_discretionary_spending(1000, sample_df())
+
+
+def test_discretionary_not_flagged_with_zero_income():
+    assert not logic_manager.excessive_discretionary_spending(0, sample_df())
+
+
+def test_discretionary_can_include_misc():
+    records = sample_ai_records + [
+        {"date_and_time": "2026-09-15", "retailer": "PayNow", "category": "Misc",
+         "transaction_amount": 100.0, "transaction_type": "Outgoing"},
+    ]
+    df = pd.DataFrame(records)
+    # 500 without Misc is not above half of 1100; 600 with Misc is
+    assert not logic_manager.excessive_discretionary_spending(1100, df)
+    assert logic_manager.excessive_discretionary_spending(1100, df, include_misc=True)
+
+
+# High bills burden
+
+def test_bills_burden_flagged_when_above_five_percent_of_income():
+    # Bills are 200; 5% of 3999 is 199.95
+    assert logic_manager.high_bills_burden(3999, sample_df())
+
+
+def test_bills_burden_not_flagged_at_exactly_five_percent():
+    assert not logic_manager.high_bills_burden(4000, sample_df())
+
+
+def test_bills_burden_not_flagged_with_zero_income():
+    assert not logic_manager.high_bills_burden(0, sample_df())
+
+
+# Subscription creep
+
+def subscription_df():
+    records = sample_ai_records + [
+        {"date_and_time": "2026-08-01", "retailer": "Spotify", "category": "Subscriptions",
+         "transaction_amount": 500.0, "transaction_type": "Outgoing"},
+        {"date_and_time": "2026-09-10 09:00:00", "retailer": "Netflix", "category": "Subscriptions",
+         "transaction_amount": 20.0, "transaction_type": "Outgoing"},
+    ]
+    return pd.DataFrame(records)
+
+
+def test_subscription_creep_flagged_when_above_five_percent_of_income():
+    # Only the 20 on 10 Sep is inside the last 30 days; 5% of 399 is 19.95
+    assert logic_manager.subscription_creep(399, subscription_df())
+
+
+def test_subscription_creep_not_flagged_at_exactly_five_percent():
+    assert not logic_manager.subscription_creep(400, subscription_df())
+
+
+def test_subscription_creep_not_flagged_without_subscriptions():
+    assert not logic_manager.subscription_creep(100, sample_df())
+
+
+def test_subscription_creep_not_flagged_with_zero_income():
+    assert not logic_manager.subscription_creep(0, subscription_df())
+
+
+# High savings (stagnant)
+
+def test_high_savings_flagged_when_above_eighty_percent_of_income():
+    assert logic_manager.high_savings_stagnant(1000, 800.01)
+
+
+def test_high_savings_not_flagged_at_exactly_eighty_percent():
+    assert not logic_manager.high_savings_stagnant(1000, 800)
+
+
+def test_high_savings_not_flagged_with_zero_income():
+    assert not logic_manager.high_savings_stagnant(0, 5000)
