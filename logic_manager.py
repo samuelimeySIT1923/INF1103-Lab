@@ -3,7 +3,7 @@ import pandas as pd
 #Business Rule 1: Cash-flow Risk	Projected net cash flow for next 30 days < S$0
 def cashflow_risk_rule(df, planned_expenses=0):
     df = df.copy()
-    df['date_and_time'] = pd.to_datetime(df['date_and_time'])
+    df['date_and_time'] = pd.to_datetime(df['date_and_time'], errors='coerce', format='mixed')
 
     latest_date = df['date_and_time'].max()
     last_30_days = df[df['date_and_time'] > latest_date - pd.Timedelta(days=30)]
@@ -159,7 +159,7 @@ def excessive_spending_rule(income,df):
 #Business Rule 6: Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
 def subscription_creep(monthly_income, df):
     df = df.copy()
-    df['date_and_time'] = pd.to_datetime(df['date_and_time'])
+    df['date_and_time'] = pd.to_datetime(df['date_and_time'], errors='coerce', format='mixed')
     df['transaction_amount'] = pd.to_numeric(
         df['transaction_amount'], errors='coerce'
     ).fillna(0)
