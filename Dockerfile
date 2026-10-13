@@ -4,8 +4,9 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m nltk.downloader wordnet omw-1.4 stopwords
 
-COPY ai_manager.py data_manager.py io_manager.py logic_manager.py ./
+COPY ai_manager.py data_manager.py io_manager.py logic_manager.py InputDescription.py ./
 COPY tests/ tests/
 COPY data/ data/
 
