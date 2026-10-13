@@ -11,7 +11,7 @@ import pypdf
 import streamlit as st
 
 from InputDescription import matchcategory
-from ai_manager import  extract_batch_standardized_transactions, allowed_categories
+from ai_manager import  extract_batch_standardized_transactions, extract_transaction_from_media, allowed_categories
 from data_manager import (
     columns,
     fallback_id_prefix,
@@ -28,9 +28,10 @@ from logic_manager import (
     cashflow_risk_rule,
     emergency_fund_inadequate,
     excessive_discretionary_spending,
+    excessive_spending_rule,
     high_bills_burden,
     high_savings_stagnant,
-    irregular_income,   
+    irregular_income,
     subscription_creep,
 )
 
@@ -95,12 +96,12 @@ with tab1:
         "Upload your spendings and income records (such as bank statements) to start tracking your finances and improving your cash flow!"
     )
 
-    with st.form("test", clear_on_submit=True):
+    with st.form("upload", clear_on_submit=True):
         file_uploaded = st.file_uploader(
             "Upload",
             label_visibility="hidden",
             type=["pdf", "csv", "json","png","jpg","jpeg"],
-            accept_multiple_files=True,
+            accept_multiple_files=False,
         )
         submitted = st.form_submit_button("Submit")
 
@@ -110,48 +111,63 @@ with tab1:
         elif not api_key:
             st.warning("Please enter your Gemini API key in the sidebar to process uploads!")
         else:
-            raw_items = []
-            for file in file_uploaded:
-                raw_items.extend(parse_uploaded_file(file))
+            text_records = []
+            all_standardized = []
 
-            if not raw_items:
-                st.warning(
-                    "No readable transactions could be extracted from the uploaded file(s)."
-                )
-            else:
-                st.info(
-                    f"Submitted {len(raw_items)} rows of raw records."
-                )
+            with st.spinner("Processing uploaded files..."):
+                for file in file_uploaded:
+                    fname = file.name.lower()
 
-                with st.spinner(f"Processing {len(raw_items)} rows of data..."):
-                    standardized_records = extract_batch_standardized_transactions(
-                        raw_items, api_key
-                    )
+                    # Branch 1: CSV and JSON files
+                    if fname.endswith((".csv", ".json")):
+                        text_records.extend(parse_uploaded_file(file))
 
-                good_records = [
-                    r for r in standardized_records
-                    if not str(r.get("transaction_id", "")).startswith(fallback_id_prefix)
-                ]
-                failed_count = len(standardized_records) - len(good_records)
+                    # Branch 2: PDF and Image files
+                    elif fname.endswith((".pdf", ".png", ".jpg", ".jpeg")):
+                        file_bytes = file.getvalue()
+                        
+                        # Determine MIME type
+                        if fname.endswith(".pdf"):
+                            mime_type = "application/pdf"
+                        elif fname.endswith(".png"):
+                            mime_type = "image/png"
+                        else:
+                            mime_type = "image/jpeg"
 
-                if good_records:
-                    df = save_collated_data(good_records)
-                    st.success(
-                        "File(s) successfully uploaded and standardized "
-                        f"({len(good_records)} records processed)!"
-                    )
-                    st.dataframe(df.tail(len(good_records))[columns], hide_index=True)
-                    if failed_count:
-                        st.warning(
-                            f"{failed_count} record(s) could not be parsed and were not saved. "
-                            "Check the terminal logs for details."
+                        media_results = extract_transaction_from_media(
+                            file_bytes=file_bytes,
+                            mime_type=mime_type,
+                            api_key=api_key,
                         )
-                else:
-                    st.error(
-                        f"Gemini extraction failed for all {failed_count} records, "
-                        "so nothing was saved. If the terminal shows 503 UNAVAILABLE, Gemini is "
-                        "temporarily overloaded - wait a few minutes and upload again."
+                        all_standardized.extend(media_results)
+
+                # Process collected CSV/JSON records in batch
+                if text_records:
+                    batch_results = extract_batch_standardized_transactions(
+                        text_records, api_key
                     )
+                    all_standardized.extend(batch_results)
+
+            # Filter out fallbacks and save valid records
+            good_records = [
+                r for r in all_standardized
+                if not str(r.get("transaction_id", "")).startswith(fallback_id_prefix)
+            ]
+            failed_count = len(all_standardized) - len(good_records)
+
+            if good_records:
+                df = save_collated_data(good_records)
+                st.success(
+                    f"File(s) successfully uploaded and processed "
+                    f"({len(good_records)} records extracted)!"
+                )
+                st.dataframe(df.tail(len(good_records))[columns], hide_index=True)
+                if failed_count:
+                    st.warning(
+                        f"{failed_count} record(s) could not be parsed and were not saved."
+                    )
+            else:
+                st.error("No valid records could be extracted from the uploaded file(s).")
     st.divider()
     st.download_button(
         label="Download File (CSV)",
@@ -196,18 +212,6 @@ with tab2:
                 df_display["transaction_amount"], errors="coerce"
             ).fillna(0.0)
             df_display = df_display.sort_values("date")
-
-            # selectbox_list = ["All"]
-            # valid_months = df_display["date"].dt.month.dropna().unique()
-            # for month_num in sorted(valid_months):
-            #     selectbox_list.append(calendar.month_name[int(month_num)])
-
-            # option = st.selectbox("Month", selectbox_list)
-
-            # if option != "All":
-            #     month_idx = list(calendar.month_name).index(option)
-            #     df_display = df_display[df_display["date"].dt.month == month_idx]
-            
         
             st.write("Dates found in transaction data:")
             st.dataframe(
@@ -291,7 +295,10 @@ with tab2:
 # -------------------------------------------------------------------------------#
     # Manual Transaction Management (Add / Amend / Delete)
 
-    all_known_categories = sorted(list(set(allowed_categories + df["category"].dropna().astype(str).tolist())))
+    all_known_categories = sorted(set(
+        allowed_categories
+        + df["category"].dropna().astype(str).str.strip().str.title().tolist()
+    ))
 
     with st.expander(" Add, Edit, or Archive Transactions"):
         action = st.radio("Choose Action:", ["➕ Add New Transaction", "✏️ Edit / Archive Existing Transaction"], horizontal=True)
@@ -306,12 +313,22 @@ with tab2:
                 )
             with col_cat2:
                 custom_cat_input = ""
+                confirm_add_cat = False
                 if selected_add_cat == "+ Custom Category...":
                     custom_cat_input = st.text_input(
                         "Enter Custom Category Name:", 
                         placeholder="e.g. Subscriptions",
                         key="add_custom_cat_input"
-                    )
+                    ).strip().title()
+
+                    if custom_cat_input and custom_cat_input not in all_known_categories:
+                        st.warning(
+                            f"⚠️ '{custom_cat_input}' is not in the registered list."
+                        )
+                        confirm_add_cat = st.checkbox(
+                            f"Confirm adding '{custom_cat_input}' as a new category",
+                            key="confirm_add_cat"
+                        )
 
             with st.form("add_transaction_form"):
                 col1, col2 = st.columns(2)
@@ -332,10 +349,19 @@ with tab2:
                 elif selected_add_cat == "+ Custom Category..." and not custom_cat_input.strip():
                     st.error("Please provide a name for the custom category.")
 
+                elif (
+                        selected_add_cat == "+ Custom Category..."
+                        and custom_cat_input not in all_known_categories
+                        and not confirm_add_cat
+                    ):
+                        st.error(
+                            f"❌ Adding '{custom_cat_input}' requires confirmation. "
+                            "Please tick the checkbox first."
+                        )
+
                 else:    
                     if selected_add_cat == "+ Custom Category...":
-                        cat_value = custom_cat_input.strip()
-                        final_add_cat = cat_value.title()
+                        final_add_cat = custom_cat_input
                     else:
                         final_add_cat = selected_add_cat
 
@@ -357,24 +383,29 @@ with tab2:
             else:
                 selected_id = st.selectbox(
                     "Select Transaction ID to Modify:",
-                    options=df["transaction_id"].tolist()
+                    options=df_display["transaction_id"].tolist()
                 )
 
                 selected_row = df[df["transaction_id"] == selected_id].iloc[0]
                 old_transaction = selected_row.to_dict()
                 current_cat = str(selected_row["category"]).strip().title()
 
-                if current_cat in allowed_categories:
-                    default_cat_index = allowed_categories.index(current_cat)
+                registered_categories = [
+                    str(cat).strip().title()
+                    for cat in all_known_categories
+                ]
+
+                if current_cat in registered_categories:
+                    default_cat_index = registered_categories.index(current_cat)
                 else:
-                    default_cat_index = len(allowed_categories)  # Point to "+ Add New Custom Category..."
+                    default_cat_index = len(registered_categories)  # Point to "+ Add New Custom Category..."
 
         
                 cat_col1, cat_col2 = st.columns(2)
                 with cat_col1:
                     selected_cat_option = st.selectbox(
                         "Category",
-                        options=allowed_categories + ["+ Add New Custom Category..."],
+                        options=registered_categories + ["+ Add New Custom Category..."],
                         index=default_cat_index,
                         key=f"edit_cat_select_{selected_id}"
                     )
@@ -385,14 +416,16 @@ with tab2:
 
                 with cat_col2:
                     if is_custom:
-                        default_custom_text = current_cat if current_cat not in allowed_categories else ""
+                        default_custom_text = (
+                            current_cat if current_cat not in registered_categories else ""
+                        )
                         custom_cat_val = st.text_input(
                             "Enter New Custom Category:",
                             value=default_custom_text,
                             key=f"edit_custom_input_{selected_id}"
                         ).strip().title()
 
-                        if custom_cat_val:
+                        if custom_cat_val and custom_cat_val not in registered_categories:
                             st.warning(f"⚠️ **'{custom_cat_val}'** is not in the registered list.")
                             confirm_new_cat = st.checkbox(
                                 f"Confirm adding '{custom_cat_val}' as a new category",
@@ -437,7 +470,7 @@ with tab2:
                                 
                         elif (
                             is_custom
-                            and custom_cat_val not in allowed_categories
+                            and custom_cat_val not in registered_categories
                             and not confirm_new_cat
                         ):
                             st.error(
@@ -452,25 +485,43 @@ with tab2:
                             else:
                                 final_cat = selected_cat_option
 
-                            # Save updates
-                            df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
-                            df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
-                            df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
-                            df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
-                            df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+                            new_values = {
+                                "date_and_time": f"{edit_date} 00:00:00",
+                                "retailer": edit_retailer.strip(),
+                                "category": final_cat,
+                                "transaction_amount": float(edit_amount),
+                                "transaction_type": edit_type,
+                            }
 
-                            new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
-                            # Save the edit to the audit trail
-                            record_audit(
-                                transaction_id=selected_id,
-                                action="EDIT",
-                                old_data=old_transaction,
-                                new_data=new_transaction,
+                            # Check whether any values actually changed
+                            changed = any(
+                                str(old_transaction[col]) != str(value)
+                                for col, value in new_values.items()
                             )
 
-                            df = update_collated_data(df)
-                            st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
-                            st.rerun()
+                            if not changed:
+                                st.info("No changes detected. Transaction remains unchanged.")
+                            else:
+                                # Save updates
+                                for col, value in new_values.items():
+                                    df.loc[df["transaction_id"] == selected_id, col] = value
+
+                                new_transaction = df[
+                                    df["transaction_id"] == selected_id
+                                ].iloc[0].to_dict()
+
+                                record_audit(
+                                    transaction_id=selected_id,
+                                    action="EDIT",
+                                    old_data=old_transaction,
+                                    new_data=new_transaction,
+                                )
+
+                                df = update_collated_data(df)
+                                st.success(
+                                    f"Transaction {selected_id} updated with category '{final_cat}'!"
+                                )
+                                st.rerun()
 
                     if submit_delete:
                         #st.write("DEBUG: Archive button submitted")
@@ -692,13 +743,30 @@ with tab2:
                         "⚠️ **High Discretionary Spending**: "
                         "Discretionary spending exceeds 50% of monthly income."
                     )
+                
+                # excessive spending rule: everything outside essential categories
+                if excessive_spending_rule(m_inc, monthly_df):
+                    st.warning(
+                        "⚠️ **Excessive Non-Essential Spending**: Spending outside Food, "
+                        "Groceries, Transport and Bills exceeds 50% of monthly income. "
+                        "Review your non-essential purchases for this month."
+                    )
 
-                # the high bills rule
+                                # the high bills rule
                 if bills_alert:
                     st.warning(
                         "⚠️ **High Bills Burden**: "
                         "Bills spending exceeds 5% of monthly income."
                     )
+
+                # irregular income rule: monthly income varies by more than 20%
+                if irregular_income(df):
+                    st.warning(
+                        "⚠️ **Irregular Income**: Your income over the last 3 months varies "
+                        "by more than 20% of its average. Consider a flexible budget and "
+                        "keeping a larger financial buffer."
+                    )
+
 
                 # Subscription creep rule: subscriptions in the last 30 days
                 if subscription_creep(m_inc, cashflow_df):

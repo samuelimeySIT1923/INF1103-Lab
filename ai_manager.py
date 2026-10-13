@@ -230,7 +230,7 @@ Raw input record:
 #Establish gemini call function with retry logic
 
 def _call_gemini(
-    prompt: str,
+    contents: Any,
     api_key: str,
     model_name: str,
     max_retries: int = 3,
@@ -248,16 +248,17 @@ def _call_gemini(
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
 
-    if not prompt.isascii():
-        prompt = _ascii_safe(prompt)
+    # Only sanitize if contents is a pure string prompt
+    if isinstance(contents, str) and not contents.isascii():
+        contents = _ascii_safe(contents)
 
     for attempt in range(1, max_retries + 1):
         try:
             response = client.models.generate_content(
-                model=model_name, contents=prompt, config=config
+                model=model_name, contents=contents, config=config
             )
             return json.loads(response.text or "")
-        except (genai_errors.APIError, json.JSONDecodeError) as exc:
+        except (genai_errors.APIError, genai_errors.ServerError, json.JSONDecodeError) as exc:
             if not _is_transient(exc) or attempt == max_retries:
                 raise
             wait = min(60, 5 * 2 ** attempt) + random.uniform(0, 3)
@@ -274,13 +275,13 @@ def _is_transient(exc: Exception) -> bool:
     return getattr(exc, "code", None) in retryable_codes
 
 
-def _call_with_fallback(prompt: str, api_key: str, model_name: str) -> Any:
+def _call_with_fallback(contents: Any, api_key: str, model_name: str) -> Any:
     models = [model_name] + [m for m in fallback_models if m != model_name]
     last_exc: Exception = RuntimeError("No models to try")
 
     for i, model in enumerate(models):
         try:
-            return _call_gemini(prompt, api_key, model, max_retries=4 if i == 0 else 2)
+            return _call_gemini(contents, api_key, model, max_retries=4 if i == 0 else 2)
         except Exception as exc:
             if not _is_transient(exc):
                 raise
@@ -382,43 +383,33 @@ def extract_transaction_from_media(
     model_name: str = default_model,
 ) -> List[Dict[str, Any]]:
     """Extract standardized transaction records directly from a PDF or image file."""
-    api_key = (api_key or "").strip()
-    client = genai.Client(api_key=api_key)
-    
-    config = types.GenerateContentConfig(
-        response_mime_type="application/json",
-        thinking_config=types.ThinkingConfig(thinking_level="low"),
-        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-    )
-
-    # Wrap binary bytes in a Part object
     media_part = types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
     prompt = build_media_prompt()
+    contents = [media_part, prompt]
 
     try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=[media_part, prompt],
-            config=config,
-        )
-        data = json.loads(response.text or "[]")
+        # Route through fallback handler across models
+        data = _call_with_fallback(contents, api_key, model_name)
         
-        # Ensure data is a list
+        if not data:
+            return [create_fallback_record("Empty media output")]
+
         if isinstance(data, dict):
             data = [data]
 
         valid_records = []
         for item in data:
-            ok, msg = validate_schema(item)
-            if ok:
-                valid_records.append(_normalise(item))
-            else:
-                logger.warning("Media record failed validation: %s", msg)
+            if isinstance(item, dict):
+                ok, msg = validate_schema(item)
+                if ok:
+                    valid_records.append(_normalise(item))
+                else:
+                    logger.warning("Media record failed validation: %s", msg)
                 
         return valid_records if valid_records else [create_fallback_record({})]
 
     except Exception:
-        logger.exception("Gemini media extraction call failed")
+        logger.exception("Gemini media extraction call failed across all models")
         return [create_fallback_record({})]
 
 #-----------------------------------------------------------------------------------#

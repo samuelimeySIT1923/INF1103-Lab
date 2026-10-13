@@ -3,7 +3,7 @@ import pandas as pd
 #Business Rule 1: Cash-flow Risk	Projected net cash flow for next 30 days < S$0
 def cashflow_risk_rule(df, planned_expenses=0):
     df = df.copy()
-    df['date_and_time'] = pd.to_datetime(df['date_and_time'])
+    df['date_and_time'] = pd.to_datetime(df['date_and_time'], errors='coerce', format='mixed')
 
     latest_date = df['date_and_time'].max()
     last_30_days = df[df['date_and_time'] > latest_date - pd.Timedelta(days=30)]
@@ -18,7 +18,25 @@ def cashflow_risk_rule(df, planned_expenses=0):
         return False
 
 
-#High Debt Burden	Total Monthly Debt repayments > 30% of monthly income	Student loans/debts limiting savings and increases stress	Advice refinancing or reaching out to financial assistance.
+#Business Rule 2: High Bills Burden	Monthly bills > 5% of monthly income	High bills burden limits savings and increases stress	Advice to reduce bills (eg. switch telco, electricity, insurance)
+def high_bills_burden(monthly_income, df):
+    df = df.copy()
+
+    df["transaction_amount"] = pd.to_numeric(
+        df["transaction_amount"], errors="coerce"
+    ).fillna(0)
+
+    bills = df[
+        (df["transaction_type"] == "Outgoing")
+        & (df["category"].astype(str).str.strip().str.lower() == "bills")
+    ]
+
+    bills_spending = bills["transaction_amount"].sum()
+
+    if monthly_income <= 0:
+        return False
+
+    return bills_spending > monthly_income * 0.05
 def excessive_discretionary_spending(
         monthly_income, df, include_misc=False
 ):
@@ -42,26 +60,6 @@ def excessive_discretionary_spending(
         return False
 
     return discretionary_spending > monthly_income * 0.50
-
-#Business Rule 2: High Bills Burden	Monthly bills > 5% of monthly income	High bills burden limits savings and increases stress	Advice to reduce bills (eg. switch telco, electricity, insurance)
-def high_bills_burden(monthly_income, df):
-    df = df.copy()
-
-    df["transaction_amount"] = pd.to_numeric(
-        df["transaction_amount"], errors="coerce"
-    ).fillna(0)
-
-    bills = df[
-        (df["transaction_type"] == "Outgoing")
-        & (df["category"].astype(str).str.strip().str.lower() == "bills")
-    ]
-
-    bills_spending = bills["transaction_amount"].sum()
-
-    if monthly_income <= 0:
-        return False
-
-    return bills_spending > monthly_income * 0.05
 
 
 #Business Rule 3: Emergency-fund inadequacy	Savings < 3 x Saverage monthly essential expenses	Lack of safety net, face risk if there is no inflow of cash.	Advice to save 3-6 months of essentials as emergency funds.
@@ -120,24 +118,29 @@ def irregular_income(df: pd.DataFrame, months: int = 3, threshold: float = THRES
 
 
 #Business Rule 5: Excessive Discretionary Spending	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
-def excessive_spending_rule(income,df):
-     cumulative_amount_spent = 0
-     for i in df['Category'].unique():
-         filtered_df = df[df['Category'] == i]
-         amt_spent = filtered_df["Amount"].sum()
-         if i not in ['Food','Transport','Bills']:
-             cumulative_amount_spent += amt_spent
-     print(cumulative_amount_spent)
-     if cumulative_amount_spent > (income*0.5):
-         return True
-     else:
-         return False
+def excessive_spending_rule(income: float, df: pd.DataFrame) -> bool:
+    """Flag when outgoing spending outside the essential categories exceeds 50% of income."""
+    if income <= 0:
+        return False
+
+    df = df.copy()
+    df["transaction_amount"] = pd.to_numeric(
+        df["transaction_amount"], errors="coerce"
+    ).fillna(0)
+
+    categories = df["category"].astype(str).str.strip().str.lower()
+    non_essential = df[
+        (df["transaction_type"] == "Outgoing")
+        & ~categories.isin(essential_categories)
+    ]
+
+    return bool(non_essential["transaction_amount"].sum() > income * 0.5)
 
 
 #Business Rule 6: Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
 def subscription_creep(monthly_income, df):
     df = df.copy()
-    df['date_and_time'] = pd.to_datetime(df['date_and_time'])
+    df['date_and_time'] = pd.to_datetime(df['date_and_time'], errors='coerce', format='mixed')
     df['transaction_amount'] = pd.to_numeric(
         df['transaction_amount'], errors='coerce'
     ).fillna(0)
