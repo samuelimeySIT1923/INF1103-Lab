@@ -114,7 +114,7 @@ def irregular_income(df: pd.DataFrame, months: int = 3, threshold: float = THRES
     if avg == 0: #no income rows = return False [Unusable Data]
         return False
     spread = totals.std(ddof=0)  # Find standard deviation
-    return bool(spread > avg * THRESHOLD) #True = irregular, false = regular
+    return bool(spread > avg * threshold) #True = irregular, false = regular
 
 
 #Business Rule 5: Excessive Discretionary Spending	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
