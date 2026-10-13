@@ -96,8 +96,39 @@ Sample transactions are included so the app has records on first run. Saves
 are written to a temporary file first, and an unreadable data file is renamed
 to `*.corrupt-<timestamp>.csv` instead of being overwritten.
 
-## Continuous integration
+## CI/CD
 
-Every push and pull request runs the test script and rebuilds the Docker
-image, running the tests inside the container, through GitHub Actions
-(`.github/workflows/tests.yml`).
+The project uses one GitHub Actions workflow, `.github/workflows/tests.yml`,
+with three jobs.
+
+| Job | Stage | Runs on | What it does |
+|---|---|---|---|
+| Run test script | CI | Every push and every pull request to `main` | Installs `requirements.txt` on a clean machine and runs the automated tests |
+| Build image and test inside container | CI | Every push and every pull request to `main` | Builds the Docker image from the `Dockerfile` and runs the tests inside the container |
+| Package Docker image | CD | Pushes to `main` only, after both CI jobs pass | Rebuilds the image, re-runs the tests inside it, and publishes it as a downloadable artifact |
+
+### Continuous integration
+
+Every change is tested automatically before it can be merged. The result
+appears as a tick or a cross next to the commit and on the pull request. The
+tests use hardcoded sample records, so the workflow needs no API key.
+
+### Continuous delivery
+
+Each merge to `main` produces a ready-to-run Docker image built from exactly
+what is on `main`. If either CI job fails, no image is published.
+
+To use a delivered image:
+
+1. On GitHub, open the **Actions** tab and select the latest run on `main`.
+2. Under **Artifacts**, download `expense-manager-image` and unzip it to get
+   `expense-manager.tar.gz`.
+3. Load and run it:
+
+```bash
+docker load -i expense-manager.tar.gz
+docker run --rm -p 8501:8501 expense-manager
+```
+
+Open http://localhost:8501 and enter a Gemini API key in the sidebar.
+Artifacts are kept for 14 days.
