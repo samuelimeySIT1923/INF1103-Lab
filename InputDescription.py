@@ -20,23 +20,20 @@ def ensurewordnet() -> None: ##Check if wordnet is downloaded, else will downloa
         nltk.download("wordnet", quiet=True)
         nltk.download("omw-1.4", quiet=True)
     try:
-        STOPWORDS.words("english")
+        stopwords.words("english")
     except LookupError:
         nltk.download("stopwords", quiet=True)
 
 ensurewordnet()
 STOPWORDS = set(stopwords.words("english")) #frequently used unique words in langauge
 CATEGORY_KEYWORDS: Dict[str, List[str]] = {
-    "Food": frozenset(["meal", "breakfast", "lunch", "dinner", "cafe", "restaurant", "snack", "foodpanda", "grabfood", "deliveroo"]),
-    "Transport": frozenset(["bus", "train", "taxi", "gojek", "tada", "ezlink", "fare", "mrt", "petrol", "fuel"]),
-    "Groceries": frozenset(["grocery", "supermarket", "fairprice", "ntuc", "vegetable", "fruit", "meat"]),
-    "Entertainment": frozenset(["movie", "game", "concert", "cinema"]),
-    "Bills": frozenset(["electricity", "water", "rent", "utility", "phone", "insurance", "loans"]),
-    "Shopping": frozenset(["clothes", "shoes", "mall", "gadget", "shopee", "lazada", "amazon", "uniqlo"]),
+    "Food": ["meal", "breakfast", "lunch", "dinner", "cafe", "restaurant", "snack", "foodpanda", "grabfood", "deliveroo"],
+    "Transport": ["bus", "train", "taxi", "gojek", "tada", "ezlink", "fare", "mrt", "petrol", "fuel"],
+    "Groceries": ["grocery", "supermarket", "fairprice", "ntuc", "vegetable", "fruit", "meat"],
+    "Entertainment": ["movie", "game", "concert", "cinema"],
+    "Bills": ["electricity", "water", "rent", "utility", "phone", "insurance", "loans"],
+    "Shopping": ["clothes", "shoes", "mall", "gadget", "shopee", "lazada", "amazon", "uniqlo"],
 } #Shortcut for potential keywords 
-KEYWORD_LOOKUP: Dict[str, frozenset] = {
-    name.lower(): frozenset(words) for name, words in CATEGORY_KEYWORDS.items()
-} #builds 2nd, easier-to-search dictionary for keywords [ie for ]
 
 @lru_cache(maxsize=1) #decorator to call nouns once and store for future reference [ie no need to keep loading nouns]
 def nounsbylength() -> Dict[int, List[str]]: #expect list of strings (words) mapped by int
@@ -72,12 +69,9 @@ def categorysynsets(category: str) -> tuple:
         synsets.extend(wordnet.synsets(w.replace(" ", "_"), pos=wordnet.NOUN)) #look up noun meaning of 1 word/phrase and add on to running list, convert space to "_"
     return tuple(synsets)
 
-
-def matchcategory( #Return (best_category, score) for a description or (None, 0.0)
-    description: str,
-    categories: Iterable[str],
-    threshold: float = 0.2, 
-) -> Tuple[Optional[str], float]: 
+#Return (best_category, score) for a description or (None, 0.0)
+def matchcategory(description: str, categories: Iterable[str]) -> Tuple[Optional[str], float]: 
+    threshold: float = 0.2
     words = {
         fixtypo(w) #fix typo
         for w in re.findall(r"[a-z]+", (description or "").lower()) #if description is blank, become empty string instead of crashing
