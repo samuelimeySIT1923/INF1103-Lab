@@ -20,6 +20,7 @@ columns = [
     "category",
     "transaction_amount",
     "transaction_type",
+    "description"
 ]
 
 data_path = Path("data/collated_data.csv")
