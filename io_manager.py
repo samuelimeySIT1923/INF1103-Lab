@@ -211,18 +211,6 @@ with tab2:
                 df_display["transaction_amount"], errors="coerce"
             ).fillna(0.0)
             df_display = df_display.sort_values("date")
-
-            # selectbox_list = ["All"]
-            # valid_months = df_display["date"].dt.month.dropna().unique()
-            # for month_num in sorted(valid_months):
-            #     selectbox_list.append(calendar.month_name[int(month_num)])
-
-            # option = st.selectbox("Month", selectbox_list)
-
-            # if option != "All":
-            #     month_idx = list(calendar.month_name).index(option)
-            #     df_display = df_display[df_display["date"].dt.month == month_idx]
-            
         
             st.write("Dates found in transaction data:")
             st.dataframe(
