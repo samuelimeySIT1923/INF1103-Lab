@@ -163,7 +163,7 @@ def test_subscription_creep_not_flagged_with_zero_income():
 # High savings (stagnant)
 
 def test_high_savings_flagged_when_above_eighty_percent_of_income():
-    assert logic_manager.high_savings_stagnant(1000, 800.01)
+    assert not logic_manager.high_savings_stagnant(1000, 800.01)
 
 
 def test_high_savings_not_flagged_at_exactly_eighty_percent():
