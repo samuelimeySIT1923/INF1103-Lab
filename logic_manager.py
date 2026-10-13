@@ -93,7 +93,7 @@ def emergency_fund_inadequate(
   
 #Irregular Income Flag	Income Variance > 20% month-to-month Income [Part-timers with fluctuating cash flow	Advice on flexible budgeting/financial buffers.]
 from decimal import Decimal #pandas already imported, add if not included
-THRESHOLD = 0.2
+THRESHOLD = 0.2 
 
 def irregular_income(df, n_months=3):
     if df.empty: #no transaction rows = return none
