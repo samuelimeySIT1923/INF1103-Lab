@@ -24,9 +24,12 @@ from data_manager import (
 )
 from logic_manager import (
     average_monthly_essential_expenses,
+    cashflow_risk_rule,
     emergency_fund_inadequate,
     excessive_discretionary_spending,
     high_bills_burden,
+    high_savings_stagnant,
+    subscription_creep,
 )
 
 #-----------------------------------------------------------------------------------#
@@ -94,7 +97,7 @@ with tab1:
         file_uploaded = st.file_uploader(
             "Upload",
             label_visibility="hidden",
-            type=["pdf", "csv", "json"],
+            type=["pdf", "csv", "json","png","jpg","jpeg"],
             accept_multiple_files=True,
         )
         submitted = st.form_submit_button("Submit")
@@ -158,7 +161,7 @@ with tab1:
 
 
 #-----------------------------------------------------------------------------------#
-#tab 2: Displaying data, graphs, and recommendations
+#tab 2: Displaying data, graphs, and recommendations 
 
 with tab2:
     st.title("Data & Graphs")
@@ -175,45 +178,45 @@ with tab2:
             errors="coerce",
             format="mixed"
         )
+        with st.expander("Debug: Inspect transaction dates"):
+            # error catch for invalid/unsupported dates
+            # to make nicer as error catch in future
+            invalid_dates = df_display[df_display["date"].isna()]
+
+            st.write("Number of invalid dates:", len(invalid_dates))
+            st.write("Examples of invalid date values:")
+            st.dataframe(
+                invalid_dates[["transaction_id", "date_and_time"]].head(20),
+                hide_index=True,
+            )
+
+            df_display["transaction_amount"] = pd.to_numeric(
+                df_display["transaction_amount"], errors="coerce"
+            ).fillna(0.0)
+            df_display = df_display.sort_values("date")
+
+            # selectbox_list = ["All"]
+            # valid_months = df_display["date"].dt.month.dropna().unique()
+            # for month_num in sorted(valid_months):
+            #     selectbox_list.append(calendar.month_name[int(month_num)])
+
+            # option = st.selectbox("Month", selectbox_list)
+
+            # if option != "All":
+            #     month_idx = list(calendar.month_name).index(option)
+            #     df_display = df_display[df_display["date"].dt.month == month_idx]
+            
         
-        # error catch for invalid/unsupported dates
-        # to make nicer as error catch in future
-        invalid_dates = df_display[df_display["date"].isna()]
+            st.write("Dates found in transaction data:")
+            st.dataframe(
+                df[["transaction_id", "date_and_time"]],
+                hide_index=True,
+            )
 
-        st.write("Number of invalid dates:", len(invalid_dates))
-        st.write("Examples of invalid date values:")
-        st.dataframe(
-            invalid_dates[["transaction_id", "date_and_time"]].head(20),
-            hide_index=True,
-        )
-
-        df_display["transaction_amount"] = pd.to_numeric(
-            df_display["transaction_amount"], errors="coerce"
-        ).fillna(0.0)
-        df_display = df_display.sort_values("date")
-
-        # selectbox_list = ["All"]
-        # valid_months = df_display["date"].dt.month.dropna().unique()
-        # for month_num in sorted(valid_months):
-        #     selectbox_list.append(calendar.month_name[int(month_num)])
-
-        # option = st.selectbox("Month", selectbox_list)
-
-        # if option != "All":
-        #     month_idx = list(calendar.month_name).index(option)
-        #     df_display = df_display[df_display["date"].dt.month == month_idx]
-        
-       
-        st.write("Dates found in transaction data:")
-        st.dataframe(
-            df[["transaction_id", "date_and_time"]],
-            hide_index=True,
-        )
-
-        st.write(
-            "Transactions with invalid dates:",
-            df_display["date"].isna().sum()
-        )
+            st.write(
+                "Transactions with invalid dates:",
+                df_display["date"].isna().sum()
+            )
 
         # Get all distinct months, including their years
         month_lookup = {
@@ -408,7 +411,6 @@ with tab2:
                         with col2:
                             edit_amount = st.number_input(
                                 "Amount (S$)",
-                                min_value=0.01,
                                 value=float(selected_row["transaction_amount"]),
                                 step=1.0,
                                 format="%.2f"
@@ -420,8 +422,12 @@ with tab2:
                             submit_delete = st.form_submit_button("Archive Transaction")
 
                     if submit_edit:
+                        #st.write("DEBUG: Update button submitted")
                         if not edit_retailer.strip():
                             st.error("Please provide a retailer name.")
+
+                        elif edit_amount <= 0:
+                            st.error("Amount must be greater than zero.")
                             
                         # Determine final category logic
                         elif is_custom and not custom_cat_val:
@@ -465,6 +471,7 @@ with tab2:
                             st.rerun()
 
                     if submit_delete:
+                        #st.write("DEBUG: Archive button submitted")
                         old_transaction = selected_row.to_dict()
                         record_audit(
                             transaction_id=selected_id,
@@ -494,6 +501,10 @@ with tab2:
     with st.form("Recommend"):
         current_balance = st.text_input("Current Balance:")
         monthly_income = st.text_input("Monthly Income:")
+        planned_expenses = st.number_input(
+            "Planned expenses for next month (S$):",
+            min_value=0.0, step=10.0, format="%.2f",
+        )
         include_misc = st.checkbox("Include Misc in discretionary spending calculation", value=False)
         submitted_rec = st.form_submit_button("Generate")
 
@@ -570,14 +581,30 @@ with tab2:
                 st.write(f"• **Current Balance**: S$ {curr_bal:,.2f}")
                 st.write(f"• **Total Recorded Expenses**: S$ {total_expenses:,.2f}")
 
-                if total_expenses > m_inc:
+                # Cash-flow risk rule: projected net cash flow for next 30 days
+                cashflow_df = df.copy()
+                cashflow_df["date_and_time"] = pd.to_datetime(
+                    cashflow_df["date_and_time"], errors="coerce", format="mixed"
+                )
+                cashflow_df["transaction_amount"] = pd.to_numeric(
+                    cashflow_df["transaction_amount"], errors="coerce"
+                ).fillna(0)
+                cashflow_df = cashflow_df.dropna(subset=["date_and_time"])
+
+                st.write(f"• **Planned Expenses (next month)**: S$ {planned_expenses:,.2f}")
+
+                if cashflow_risk_rule(cashflow_df, planned_expenses):
                     st.warning(
-                        "⚠️ **Cash-Flow Risk**: Expenses exceed monthly income. "
-                        "Consider curbing discretionary spending."
+                        "⚠️ **Cash-Flow Risk**: Your projected net cash flow for the next 30 days "
+                        "is below S$ 0 after your planned expenses. Consider postponing "
+                        "non-essential purchases, cutting discretionary spending, or setting "
+                        "aside part of your current balance to cover the shortfall."
                     )
                 else:
                     st.success(
-                        "✅ **Healthy Cash Flow**: Spending remains within monthly income bounds."
+                        "✅ **Healthy Cash Flow**: Your projected income covers your spending "
+                        "and planned expenses for the next 30 days. Consider putting the "
+                        "surplus into savings or your emergency fund."
                     )
 
                 avg_essentials = average_monthly_essential_expenses(df)
@@ -605,6 +632,33 @@ with tab2:
                     st.warning(
                         "⚠️ **High Bills Burden**: "
                         "Bills spending exceeds 5% of monthly income."
+                    )
+
+                # Subscription creep rule: subscriptions in the last 30 days
+                if subscription_creep(m_inc, cashflow_df):
+                    st.warning(
+                        "⚠️ **Subscription Creep**: Your subscriptions in the last 30 days "
+                        "exceed 5% of your monthly income. Review your recurring subscriptions "
+                        "and cancel the ones you rarely use."
+                    )
+                else:
+                    st.success(
+                        "✅ **Subscriptions Under Control**: Your subscriptions are within "
+                        "5% of your monthly income."
+                    )
+
+                # High savings (stagnant) rule: current balance vs monthly income
+                if high_savings_stagnant(m_inc, curr_bal):
+                    st.info(
+                        "💡 **Savings Could Work Harder**: Your current balance is more than 80% "
+                        "of your monthly income. After keeping your emergency fund, consider "
+                        "speaking to a financial adviser or exploring safer investment options "
+                        "such as ETFs so your savings can grow."
+                    )
+                else:
+                    st.success(
+                        "✅ **Savings Level**: No idle savings detected. Keep building your "
+                        "emergency fund before investing."
                     )
 
             except ValueError:

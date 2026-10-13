@@ -1,15 +1,17 @@
 import pandas as pd
 
-#Cash-flow Risk	Projected net cash flow for next 30 days < S$0
+#Business Rule 1: Cash-flow Risk	Projected net cash flow for next 30 days < S$0
 def cashflow_risk_rule(df, planned_expenses=0):
     df = df.copy()
     df['date_and_time'] = pd.to_datetime(df['date_and_time'])
+
     latest_date = df['date_and_time'].max()
     last_30_days = df[df['date_and_time'] > latest_date - pd.Timedelta(days=30)]
+
     inflow = last_30_days[last_30_days['transaction_type'] == 'Incoming']['transaction_amount'].sum()
     outflow = last_30_days[last_30_days['transaction_type'] == 'Outgoing']['transaction_amount'].sum()
     projected_net_cashflow = inflow - outflow - planned_expenses
-    #print(projected_net_cashflow)
+
     if projected_net_cashflow < 0:
         return True
     else:
@@ -41,6 +43,7 @@ def excessive_discretionary_spending(
 
     return discretionary_spending > monthly_income * 0.50
 
+#Business Rule 2: High Bills Burden	Monthly bills > 5% of monthly income	High bills burden limits savings and increases stress	Advice to reduce bills (eg. switch telco, electricity, insurance)
 def high_bills_burden(monthly_income, df):
     df = df.copy()
 
@@ -61,7 +64,7 @@ def high_bills_burden(monthly_income, df):
     return bills_spending > monthly_income * 0.05
 
 
-#Emergency-fund inadequacy	Savings < 3 x Saverage monthly essential expenses	Lack of safety net, face risk if there is no inflow of cash.	Advice to save 3-6 months of essentials as emergency funds.
+#Business Rule 3: Emergency-fund inadequacy	Savings < 3 x Saverage monthly essential expenses	Lack of safety net, face risk if there is no inflow of cash.	Advice to save 3-6 months of essentials as emergency funds.
 essential_categories = {"food", "groceries", "transport", "bills"}
 
 def average_monthly_essential_expenses(df: pd.DataFrame) -> float:
@@ -91,7 +94,7 @@ def emergency_fund_inadequate(
     return savings < months_required * average_monthly_essential_expenses(df)
 
   
-#Irregular Income Flag	Income Variance > 20% month-to-month Income [Part-timers with fluctuating cash flow	Advice on flexible budgeting/financial buffers.]
+#Business Rule 4: Irregular Income Flag Income Variance > 20% month-to-month Income [Part-timers with fluctuating cash flow	Advice on flexible budgeting/financial buffers.]
 from decimal import Decimal #pandas already imported, add if not included
 THRESHOLD = 0.2 
 
@@ -115,7 +118,7 @@ def irregular_income(df, n_months=3):
     return bool(spread > avg * THRESHOLD) #True = irregular, false = regular
 
 
-#Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
+#Business Rule 5: Excessive Discretionary Spending	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
 def excessive_spending_rule(income,df):
      cumulative_amount_spent = 0
      for i in df['Category'].unique():
@@ -130,7 +133,39 @@ def excessive_spending_rule(income,df):
          return False
 
 
-# #Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
+#Business Rule 6: Subscription Creep	Recurring subscriptions > 5% of income	Subscriptions fees adding up financial drain	Advice on cutting unnecessary subscriptions
+def subscription_creep(monthly_income, df):
+    df = df.copy()
+    df['date_and_time'] = pd.to_datetime(df['date_and_time'])
+    df['transaction_amount'] = pd.to_numeric(
+        df['transaction_amount'], errors='coerce'
+    ).fillna(0)
+
+    latest_date = df['date_and_time'].max()
+    last_30_days = df[df['date_and_time'] > latest_date - pd.Timedelta(days=30)]
+
+    categories = last_30_days['category'].astype(str).str.strip().str.lower()
+    subscriptions = last_30_days[
+        (last_30_days['transaction_type'] == 'Outgoing')
+        & categories.str.contains('subscription')
+    ]
+    subscription_spending = subscriptions['transaction_amount'].sum()
+
+    if monthly_income <= 0:
+        return False
+
+    if subscription_spending > monthly_income * 0.05:
+        return True
+    else:
+        return False
 
 
-# #High Savings (Stagnant)	Savings [left in bank] > 80% of income 	Warning of limited financial growth	Advice reaching out to financial advisers / safer investment options (eg ETFs)
+#Business Rule 7: High Savings (Stagnant)	Savings [left in bank] > 80% of income 	Warning of limited financial growth	Advice reaching out to financial advisers / safer investment options (eg ETFs)
+def high_savings_stagnant(monthly_income, savings):
+    if monthly_income <= 0:
+        return False
+
+    if savings > monthly_income * 0.80:
+        return True
+    else:
+        return False
