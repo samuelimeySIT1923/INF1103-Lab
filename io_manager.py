@@ -93,7 +93,7 @@ with tab1:
         "Upload your spendings and income records (such as bank statements) to start tracking your finances and improving your cash flow!"
     )
 
-    with st.form("test", clear_on_submit=True):
+    with st.form("upload", clear_on_submit=True):
         file_uploaded = st.file_uploader(
             "Upload",
             label_visibility="hidden",
