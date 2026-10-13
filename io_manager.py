@@ -100,7 +100,7 @@ with tab1:
             "Upload",
             label_visibility="hidden",
             type=["pdf", "csv", "json","png","jpg","jpeg"],
-            accept_multiple_files=True,
+            accept_multiple_files=False,
         )
         submitted = st.form_submit_button("Submit")
 
