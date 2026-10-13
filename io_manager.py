@@ -27,8 +27,10 @@ from logic_manager import (
     cashflow_risk_rule,
     emergency_fund_inadequate,
     excessive_discretionary_spending,
+    excessive_spending_rule,
     high_bills_burden,
     high_savings_stagnant,
+    irregular_income,
     subscription_creep,
 )
 
@@ -641,13 +643,30 @@ with tab2:
                         "⚠️ **High Discretionary Spending**: "
                         "Discretionary spending exceeds 50% of monthly income."
                     )
+                
+                # excessive spending rule: everything outside essential categories
+                if excessive_spending_rule(m_inc, monthly_df):
+                    st.warning(
+                        "⚠️ **Excessive Non-Essential Spending**: Spending outside Food, "
+                        "Groceries, Transport and Bills exceeds 50% of monthly income. "
+                        "Review your non-essential purchases for this month."
+                    )
 
-                # the high bills rule
+                                # the high bills rule
                 if bills_alert:
                     st.warning(
                         "⚠️ **High Bills Burden**: "
                         "Bills spending exceeds 5% of monthly income."
                     )
+
+                # irregular income rule: monthly income varies by more than 20%
+                if irregular_income(df):
+                    st.warning(
+                        "⚠️ **Irregular Income**: Your income over the last 3 months varies "
+                        "by more than 20% of its average. Consider a flexible budget and "
+                        "keeping a larger financial buffer."
+                    )
+
 
                 # Subscription creep rule: subscriptions in the last 30 days
                 if subscription_creep(m_inc, cashflow_df):
