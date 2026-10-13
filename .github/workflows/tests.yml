@@ -1,4 +1,4 @@
-name: Tests
+name: CI/CD
 
 on:
   push:
@@ -37,3 +37,29 @@ jobs:
 
       - name: Run tests inside the container
         run: docker run --rm expense-manager python -m pytest tests -v
+
+  
+  deliver:
+    name: Package Docker image
+    runs-on: ubuntu-latest
+    needs: [pytest, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t expense-manager .
+
+      - name: Run tests inside the container
+        run: docker run --rm expense-manager python -m pytest tests -v
+
+      - name: Export image
+        run: docker save expense-manager | gzip > expense-manager.tar.gz
+
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: expense-manager-image
+          path: expense-manager.tar.gz
+          retention-days: 14
