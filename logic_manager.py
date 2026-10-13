@@ -92,50 +92,27 @@ def emergency_fund_inadequate(
 
   
 #Irregular Income Flag	Income Variance > 20% month-to-month Income [Part-timers with fluctuating cash flow	Advice on flexible budgeting/financial buffers.]
-from datetime import date
-from decimal import Decimal
-from statistics import pstdev
-THRESHOLD = Decimal("0.20")
+from decimal import Decimal #pandas already imported, add if not included
+THRESHOLD = 0.2
 
-#Def 1: get curent and last 2 months, return (year, month) strings [Newest 1st]
-def last_n_months(n=3):
-    today = date.today() #get today's date
-    base = today.year * 12 + today.month - 1 #turn date into single “months since year 0” number
-    return [(y, m + 1) for y, m in (divmod(base - i, 12) for i in range(n))]
-#divmod - divides number by 12 and return (quotient, remainder) which is (year,0-based month[0-11])
-#(y, m + 1) - add 1 back to conver the month to 1-12 range
-
-#Def 2: get curent and last 2 months, return MMYY strings [Newest 1st]
-def monthly_inflows(rows, months):
-    totals = dict.fromkeys(months, Decimal(0)) #Create "keys" for the selected month range
-    for r in rows: #for each transaction
-        key = (r["date_and_time"].year, r["date_and_time"].month) #Convert row's date into (year, month)
-        if r["transaction_type"] == "Incoming" and key in totals: #keep rows that are incoming + matches the "keys"
-            totals[key] += Decimal(str(r["amount"])) #add amount into particular month's runing total
-    return totals
-
-#Def 3: Calculate and determine variability
-def main(rows):
-    #get values of 
-    values = list(monthly_inflows(rows, last_n_months(3)).values()) #get total incoming of each month
-    avg = sum(values) / len(values) #get average incoming of each month
-    spread = pstdev(values)  #calculate income [incoming] varability
-    limit = avg * THRESHOLD #calculate X% of average monthly income
-    print(f"Average monthly income: {avg:.2f}")
-    print(f"Income std deviation:   {spread:.2f}")
-    print(f"20% of average income:  {limit:.2f}")
-    if avg == 0:
-        #print("No income recorded, so the comparison isn't meaningful.")
+def irregular_income(df, n_months=3):
+    if df.empty: #no transaction rows = return none
         return None
-    elif spread > limit:
-        #print("<Irregular Income Flag> Income variability is MORE than 20% of average income. ")
-        return True
-    else:
-        #print("Income variability is NOT more than 20% of average income.")
-        return False
-
-if __name__ == "__main__":
-    main([])  #Call in real csv data {TO LINK}
+    df = df.copy()     #create a copy of the data
+    df["date_and_time"] = pd.to_datetime(df["date_and_time"]) #convert to real datatime values
+    incoming = df[df["transaction_type"] == "Incoming"]     # keep incoming transaction types only
+    last_month = df["date_and_time"].max().to_period("M") #Get the last n calendar months in the data
+    months = pd.period_range(end=last_month, periods=n_months, freq="M") #3 consecutive months ending at that month built
+    monthly = (
+        incoming.groupby(incoming["date_and_time"].dt.to_period("M"))["transaction_amount"]
+        .sum()
+        .reindex(months, fill_value=0)
+    )     #build a series of total incoming per month (over 3 months); sum all in month, reindex adds 0 for months with no incoming rows
+    avg = monthly.mean() #get average monthly mean
+    if avg == 0: #no income rows = return none
+        return None
+    spread = monthly.std(ddof=0)  # Find standard deviation
+    return bool(spread > avg * THRESHOLD) #True = irregular, false = regular
 
 
 #Excessive DiscretionarySpending 	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 
