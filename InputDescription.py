@@ -1,11 +1,10 @@
 import re
 import nltk
 import difflib
-from datetime import datetime
-from nltk.corpus import wordnet
 
-nltk.download("stopwords", quiet=True)
-nltk.download("wordnet", quiet=True)
+from functools import lru_cache
+from typing import Dict, Iterable, List, Optional, Tuple
+from nltk.corpus import stopwords, wordnet
 
 # Naming Convention
 # lower full - definition
@@ -14,123 +13,87 @@ nltk.download("wordnet", quiet=True)
 # Full Upper no underscore - user input
 # Full Upper with Underscroe - Stored Arrays
 
-ALL_KNOWN_CATEGORIES = [ 
-    "Food",
-    "Transport",
-    "Groceries",
-    "Entertainment",
-    "Bills",
-    "Shopping",
-    "Misc",
-]
-FULL_TABLE = []
-MISC_TABLE = []
+def ensurewordnet() -> None: ##Check if wordnet is downloaded, else will download. Nothing expected to return
+    try:
+        wordnet.synsets("bird")
+    except LookupError:
+        nltk.download("wordnet", quiet=True)
+        nltk.download("omw-1.4", quiet=True)
+    try:
+        stopwords.words("english")
+    except LookupError:
+        nltk.download("stopwords", quiet=True)
 
-#[For 3A] lookup table that store WordNet's meaning for each category
-CATEGORY_SYNSETS = {
-    category: wordnet.synsets(category.lower(), pos=wordnet.NOUN)
-    for category in ALL_KNOWN_CATEGORIES
-}
+ensurewordnet()
+STOPWORDS = set(stopwords.words("english")) #frequently used unique words in langauge
+CATEGORY_KEYWORDS: Dict[str, List[str]] = {
+    "Food": ["meal", "breakfast", "lunch", "dinner", "cafe", "restaurant", "snack", "foodpanda", "grabfood", "deliveroo"],
+    "Transport": ["bus", "train", "taxi", "gojek", "tada", "ezlink", "fare", "mrt", "petrol", "fuel"],
+    "Groceries": ["grocery", "supermarket", "fairprice", "ntuc", "vegetable", "fruit", "meat"],
+    "Entertainment": ["movie", "game", "concert", "cinema"],
+    "Bills": ["electricity", "water", "rent", "utility", "phone", "insurance", "loans"],
+    "Shopping": ["clothes", "shoes", "mall", "gadget", "shopee", "lazada", "amazon", "uniqlo"],
+} #Shortcut for potential keywords 
 
-#[For 3B] Array of every noun WordNet knows
-ALL_NOUNS = list(wordnet.all_lemma_names(pos=wordnet.NOUN))
+@lru_cache(maxsize=1) #decorator to call nouns once and store for future reference [ie no need to keep loading nouns]
+def nounsbylength() -> Dict[int, List[str]]: #expect list of strings (words) mapped by int
+    groups: Dict[int, List[str]] = {} #Create  disctionary mapping int [word length int] to a list of strings [words]
+    for noun in wordnet.all_lemma_names(pos=wordnet.NOUN): #for every noun
+        if noun.isalpha():
+            groups.setdefault(len(noun), []).append(noun) #ensure words are pure letters
+    return groups
 
-#Function 1A: Sort any item with invalid categories into "Misc"
-def assignmisc(mainRows):
-    for row in mainRows:
-        if row.get("category") not in ALL_KNOWN_CATEGORIES: #To includ array of defined categories
-            row["category"] = "Misc"
-    return mainRows
-
-#Function 1B: Call any rows with Misc Categories
-def getmisc(mainRows):
-    """Return all rows categorized as 'Misc'."""
-    return [row.copy() for row in mainRows if row["category"] == "Misc"]
-
-#Function 3A: Fix Typo with Closest known words
-def fixtypo(word, cutoff=0.8):
-    if len(word) < 4:                    # Omit short words given too many false fixes
+@lru_cache(maxsize=4096) #Fix Typo with Closest known words
+def fixtypo(word: str, cutoff: float = 0.8) -> str:
+    if len(word) < 4:  # Omit short words as they cause too many false fixes
         return word
-    if wordnet.synsets(word):            # WordNet knows word in any part of speech
+    if wordnet.synsets(word):  # WordNet knows word in any part of speech, return word
         return word
-    matches = difflib.get_close_matches(word, ALL_NOUNS, n=1, cutoff=cutoff)
-    if matches:
-        print(f"  (corrected '{word}' -> '{matches[0]}')") #declare autocorrected word
-        return matches[0]
-    return word
+    bylength = nounsbylength() #fetches dictionary of nouns
+    pool = [
+        noun
+        for length in range(len(word) - 2, len(word) + 3) #length range of n-2 to n+3
+        for noun in bylength.get(length, []) #return empty list instead of KeyError if no nouns found
+    ] 
+    matches = difflib.get_close_matches(word, pool, n=1, cutoff=cutoff) #compare word against pool of words, matches if n=1 when at least cutoff range [ie 0.8]
+    return matches[0] if matches else word #Return best matching word, else return original word unchanged
+ 
+@lru_cache(maxsize=512) #Given Cateogry Name, return WordNet noun meaning and keywords as a tuple. Run once and reuse
+def categorysynsets(category: str) -> tuple: 
+    words = re.findall(r"[a-z]+", category.lower()) #standby to handle multiple words
+    words += CATEGORY_KEYWORDS.get(category.title(), []) #build list of words to lookup [Category + keywords, no keywords = blank]
+    synsets = []
+    for w in words: #for each word meaning, add to 1 list
+        if w in STOPWORDS: #skip if it is a frequently used unique words in langauge
+            continue
+        synsets.extend(wordnet.synsets(w.replace(" ", "_"), pos=wordnet.NOUN)) #look up noun meaning of 1 word/phrase and add on to running list, convert space to "_"
+    return tuple(synsets)
 
-#Function 3B: Return category most similar to word in description, or none
-def matchcategory(description, threshold=0.2): #treshold = level of acceptance to determine similarity of words
-    words = {fixtypo(word) for word in re.findall(r"[a-z]+", description.lower())}
-        
-    bestCategory = None #temp variable to store closest category
-    bestScore = 0 #temp variable to determine highscore of closest category
-    
-    for category, synCategory in CATEGORY_SYNSETS.items(): #for every category with stored meanings 
-        for word in words: #for every word in description
-            for synWord in wordnet.synsets(word, pos=wordnet.NOUN): #lookup word meaning in WordNet 1 at a time
-                for synCat in synCategory: #For each meaning of category
-                    # Compare closenest of meaning [1.0 = identical meaning, 0.5 = 1 step apart, 
-                    # 0.25 = 3 Steps apart, none = meanings not connected]
-                    score = synWord.path_similarity(synCat) 
-                    if score and score > bestScore:     #Remember if highet score so far               
-                        bestScore = score
-                        bestCategory = category
-
-    if bestScore >= threshold: #ie highscore higher than threshold
-        print(f"'{description}' matches category '{bestCategory}' ({bestScore:.2f})") #Announce Description matches a category [List score - debugging]
-        return bestCategory #return closest category
-    return None #none if below threshold
-
-#Function 3C: Accepting of User input [Y/N]
-def askyn(prompt):
-    while True: #loop until return occurs [ie valid Y/N]
-        answer = input(prompt).strip().lower()
-        if answer in ("y", "yes"):
-            return True
-        if answer in ("n", "no"):
-            return False
-        print("Please answer yes or no.")
-
-#Function 3D: Asking & Matching of Description
-def processmiscrows(tempRows):
-    for row in tempRows:
-        while True: #ie Get 1 row with Misc Category
-            #Function 2: For any rows with Description "Misc", ask for user input
-            row["description"] = input(f"Describe '{row['transaction_id']}' on '{row['date_and_time']}': ").strip()
-            matched = matchcategory(row["description"])
-
-            #3Ci. Match with ALL_KNOWN_CATEGORIES
-            if matched:                                   
-                row["category"] = matched
-                print(f"  -> Matched category: {matched}")
-                break
-
-            #3Cii. No match: Ask whether to keep as Misc
-            if askyn("No category matched. Keep Category as 'Misc'? (yes/no) "):
-                print("  -> Description saved, kept as Misc.")
-                break
-            print("  Category not matched, please retype & rephrase.")  # 3b-ii
-
-#Function 4A: Write updated category and description back to the main table.
-def synctomain(mainRows, tempRows):
-    updates = {row["transaction_id"]: row for row in tempRows}
-    for row in mainRows:
-        if row["transaction_id"] in updates:
-            row["category"] = updates[row["transaction_id"]]["category"]
-            row["description"] = updates[row["transaction_id"]]["description"]
-
-#Running Code
-assignmisc(FULL_TABLE)
-MISC_TABLE = getmisc(FULL_TABLE)
-processmiscrows(MISC_TABLE)
-synctomain(FULL_TABLE, MISC_TABLE)
-
-#Output Sent
-updateStamp = datetime.now().strftime("%Y-%m-%d[%H:%M:%S]")
-print(f"Final table: \n On {updateStamp}")
-for row in FULL_TABLE:
-    print(row)
-
-#once done with table, reset table to blank state
-MISC_TABLE.clear()
+#Return (best_category, score) for a description or (None, 0.0)
+def matchcategory(description: str, categories: Iterable[str]) -> Tuple[Optional[str], float]: 
+    threshold: float = 0.2
+    words = {
+        fixtypo(w) #fix typo
+        for w in re.findall(r"[a-z]+", (description or "").lower()) #if description is blank, become empty string instead of crashing
+        if w not in STOPWORDS #drop filler words
+    }
+    word_synsets = [
+        syn for w in words for syn in wordnet.synsets(w, pos=wordnet.NOUN) # Look up each word's meanings once
+    ]
+    if not word_synsets: #if no word have any meaning = return early with no match
+        return None, 0.0
+    bestCategory: Optional[str] = None
+    bestScore = 0.0 #
+    for category in categories: #for every category
+        for cat_syn in categorysynsets(category): #for every meaning stored in list
+            for word_syn in word_synsets: #for every word
+                score = word_syn.path_similarity(cat_syn)
+                # Compare closenest of meaning [1.0 = identical meaning, 0.5 = 1 step apart, 
+                # 0.25 = 3 Steps apart, none = meanings not connected]
+                if score and score > bestScore: #Remember if highet score so far
+                    bestScore = score
+                    bestCategory = category
+ 
+    if bestScore >= threshold: #if exceed treshold, return. Else reject
+        return bestCategory, bestScore
+    return None, 0.0

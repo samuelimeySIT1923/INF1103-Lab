@@ -99,7 +99,8 @@ THRESHOLD = 0.2
 def irregular_income(df: pd.DataFrame, months: int = 3, threshold: float = THRESHOLD) -> bool:
     df = df.copy()     #create a copy of the data
     df["date_and_time"] = pd.to_datetime(df["date_and_time"], format="mixed", errors="coerce") #convert to real datatime values, allow multiple data styee; errors="coerce" > put "NaT" instead of crashing
-    df = df.dropna(subset=["date_and_time"])
+    df["transaction_amount"] = pd.to_numeric(df["transaction_amount"], errors="coerce").fillna(0) #convert to real numbers; errors="coerce".fillna(0) > put "0" instead of crashing
+    df = df.dropna(subset=["date_and_time"]) 
     if df.empty:     #no transaction rows = return False [Unusable Data]
         return False
     incoming = df[df["transaction_type"] == "Incoming"]     # keep incoming transaction types only
@@ -113,8 +114,7 @@ def irregular_income(df: pd.DataFrame, months: int = 3, threshold: float = THRES
     avg = totals.mean() #get average monthly mean
     if avg == 0: #no income rows = return False [Unusable Data]
         return False
-    spread = totals.std(ddof=0)  # Find standard deviation
-    return bool(spread > avg * threshold) #True = irregular, false = regular
+    return bool(totals.std(ddof=0) > avg * THRESHOLD) # Find standard deviation; True = irregular, false = regular
 
 
 #Business Rule 5: Excessive Discretionary Spending	Discretionary Category > 50% of income 	Overspending on non-essentials result in financial drain	Advice to reduce 

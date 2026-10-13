@@ -10,6 +10,7 @@ import plotly.express as px
 import pypdf
 import streamlit as st
 
+from InputDescription import matchcategory
 from ai_manager import  extract_batch_standardized_transactions, extract_transaction_from_media, allowed_categories
 from data_manager import (
     columns,
@@ -538,6 +539,56 @@ with tab2:
                         st.success(f"Transaction {selected_id} archived!")
                         st.rerun()
 
+
+#-----------------------------------------------------------------------------------#
+#Get Description and Recategorise based on it
+    with st.expander("Review 'Misc' transactions"): #call any misc categories
+        misc_df = df[df["category"].astype(str).str.strip().str.lower() == "misc"] 
+        suggest_cats = [c for c in allowed_categories if c.lower() != "misc"]
+
+        if misc_df.empty: #if misc category is empty, return "No Misc transactions to review"
+            st.info("No Misc transactions to review.")
+        else:
+            for _, row in misc_df.iterrows(): #for every misc row
+                tid = row["transaction_id"] #get id and save
+                desc = st.text_input(
+                    f"{tid} | {row['date_and_time']} | {row['retailer']} | {row['category']} | S$ {row['transaction_amount']}| {row['transaction_type']}",
+                    key=f"misc_desc_{tid}",
+                    placeholder="Describe this transaction, e.g. 'bus fare'",
+                )
+                if not desc.strip(): #no description = next item
+                    continue
+                match, score = matchcategory(desc, suggest_cats) #get score & determine if match preexisting 
+                if match:
+                    st.caption(f"Suggested category: **{match}** (similarity {score:.2f})")
+                    default_idx = suggest_cats.index(match) #matach = set new category
+                else:
+                    st.caption("No confident match found. Please pick a category manually.")
+                    default_idx = 0 #no match
+
+                # key includes `match` so the default refreshes when the description changes
+                chosen = st.selectbox(
+                    "Category",
+                    options=suggest_cats,
+                    index=default_idx,
+                    key=f"misc_cat_{tid}_{match}",
+                )
+
+                if st.button("Apply category", key=f"misc_apply_{tid}"):
+                    old_transaction = row.to_dict()
+                    df.loc[df["transaction_id"] == tid, "category"] = chosen
+                    new_transaction = df[df["transaction_id"] == tid].iloc[0].to_dict()
+
+                    record_audit(
+                        transaction_id=tid,
+                        action="EDIT",
+                        old_data=old_transaction,
+                        new_data=new_transaction,
+                    )
+                    df = update_collated_data(df)
+                    st.success(f"Transaction {tid} recategorised as '{chosen}'!")
+                    st.rerun()
+
 # Displaying the Audit trail from csv
     st.subheader("Audit Trail")
 
@@ -672,6 +723,20 @@ with tab2:
                     st.success(
                         "✅ **Adequate Safety Net**: Emergency reserves meet recommended guidelines."
                     )
+
+                # Irregular income rule: income variance across the latest 3 months
+                if irregular_income(cashflow_df):
+                    st.warning(
+                        "⚠️ **Irregular Income**: Your monthly income varies by more than 20% "
+                        "of its average over the last 3 months. Consider flexible budgeting "
+                        "and building a financial buffer to cover lean months."
+                    )
+                else:
+                    st.success(
+                        "✅ **Stable Income**: Your monthly income has been consistent over "
+                        "the last 3 months."
+                    )
+
                 # discretionary-spending rule
                 if discretionary_alert:
                     st.warning(
