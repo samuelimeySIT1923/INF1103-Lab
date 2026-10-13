@@ -484,25 +484,43 @@ with tab2:
                             else:
                                 final_cat = selected_cat_option
 
-                            # Save updates
-                            df.loc[df["transaction_id"] == selected_id, "date_and_time"] = f"{edit_date} 00:00:00"
-                            df.loc[df["transaction_id"] == selected_id, "retailer"] = edit_retailer.strip()
-                            df.loc[df["transaction_id"] == selected_id, "category"] = final_cat
-                            df.loc[df["transaction_id"] == selected_id, "transaction_amount"] = float(edit_amount)
-                            df.loc[df["transaction_id"] == selected_id, "transaction_type"] = edit_type
+                            new_values = {
+                                "date_and_time": f"{edit_date} 00:00:00",
+                                "retailer": edit_retailer.strip(),
+                                "category": final_cat,
+                                "transaction_amount": float(edit_amount),
+                                "transaction_type": edit_type,
+                            }
 
-                            new_transaction = df[df["transaction_id"] == selected_id].iloc[0].to_dict()
-                            # Save the edit to the audit trail
-                            record_audit(
-                                transaction_id=selected_id,
-                                action="EDIT",
-                                old_data=old_transaction,
-                                new_data=new_transaction,
+                            # Check whether any values actually changed
+                            changed = any(
+                                str(old_transaction[col]) != str(value)
+                                for col, value in new_values.items()
                             )
 
-                            df = update_collated_data(df)
-                            st.success(f"Transaction {selected_id} updated with category '{final_cat}'!")
-                            st.rerun()
+                            if not changed:
+                                st.info("No changes detected. Transaction remains unchanged.")
+                            else:
+                                # Save updates
+                                for col, value in new_values.items():
+                                    df.loc[df["transaction_id"] == selected_id, col] = value
+
+                                new_transaction = df[
+                                    df["transaction_id"] == selected_id
+                                ].iloc[0].to_dict()
+
+                                record_audit(
+                                    transaction_id=selected_id,
+                                    action="EDIT",
+                                    old_data=old_transaction,
+                                    new_data=new_transaction,
+                                )
+
+                                df = update_collated_data(df)
+                                st.success(
+                                    f"Transaction {selected_id} updated with category '{final_cat}'!"
+                                )
+                                st.rerun()
 
                     if submit_delete:
                         #st.write("DEBUG: Archive button submitted")
