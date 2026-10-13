@@ -95,26 +95,27 @@ def emergency_fund_inadequate(
 
   
 #Business Rule 4: Irregular Income Flag Income Variance > 20% month-to-month Income [Part-timers with fluctuating cash flow	Advice on flexible budgeting/financial buffers.]
-from decimal import Decimal #pandas already imported, add if not included
+#pandas already imported, add "import pandas as pd" if not included
 THRESHOLD = 0.2 
 
-def irregular_income(df, n_months=3):
-    if df.empty: #no transaction rows = return none
-        return None
+def irregular_income(df: pd.DataFrame, months: int = 3, threshold: float = THRESHOLD) -> bool:
     df = df.copy()     #create a copy of the data
-    df["date_and_time"] = pd.to_datetime(df["date_and_time"]) #convert to real datatime values
+    df["date_and_time"] = pd.to_datetime(df["date_and_time"], format="mixed", errors="coerce") #convert to real datatime values, allow multiple data styee; errors="coerce" > put "NaT" instead of crashing
+    df = df.dropna(subset=["date_and_time"])
+    if df.empty:     #no transaction rows = return False [Unusable Data]
+        return False
     incoming = df[df["transaction_type"] == "Incoming"]     # keep incoming transaction types only
     last_month = df["date_and_time"].max().to_period("M") #Get the last n calendar months in the data
-    months = pd.period_range(end=last_month, periods=n_months, freq="M") #3 consecutive months ending at that month built
-    monthly = (
+    periods = pd.period_range(end=last_month, periods=months, freq="M") #3 consecutive months ending at that month built
+    totals = (
         incoming.groupby(incoming["date_and_time"].dt.to_period("M"))["transaction_amount"]
         .sum()
-        .reindex(months, fill_value=0)
+        .reindex(periods, fill_value=0)
     )     #build a series of total incoming per month (over 3 months); sum all in month, reindex adds 0 for months with no incoming rows
-    avg = monthly.mean() #get average monthly mean
-    if avg == 0: #no income rows = return none
-        return None
-    spread = monthly.std(ddof=0)  # Find standard deviation
+    avg = totals.mean() #get average monthly mean
+    if avg == 0: #no income rows = return False [Unusable Data]
+        return False
+    spread = totals.std(ddof=0)  # Find standard deviation
     return bool(spread > avg * THRESHOLD) #True = irregular, false = regular
 
 
