@@ -382,7 +382,7 @@ with tab2:
             else:
                 selected_id = st.selectbox(
                     "Select Transaction ID to Modify:",
-                    options=df["transaction_id"].tolist()
+                    options=df_display["transaction_id"].tolist()
                 )
 
                 selected_row = df[df["transaction_id"] == selected_id].iloc[0]
