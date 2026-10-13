@@ -5,3 +5,7 @@ __pycache__/
 data/*.tmp
 data/*.corrupt-*
 .DS_Store
+data/audit_trail.csv
+.pytest_cache/
+*.tar
+git_history.txt
