@@ -7,7 +7,6 @@ import math
 
 import pandas as pd
 import plotly.express as px
-import pypdf
 import streamlit as st
 
 from InputDescription import matchcategory
@@ -55,18 +54,6 @@ def parse_uploaded_file(uploaded_file: Any) -> List[Any]:
                 items.extend(content)
             else:
                 items.append(content)
-
-        elif fname.endswith(".pdf"):
-            reader = pypdf.PdfReader(uploaded_file)
-            for page in reader.pages:
-                text = page.extract_text()
-                if text:
-                    lines = [
-                        line.strip()
-                        for line in text.splitlines()
-                        if len(line.strip()) > 5
-                    ]
-                    items.extend(lines)
 
     except Exception as exc:
         st.error(f"Error reading file '{uploaded_file.name}': {exc}")
