@@ -138,7 +138,7 @@ def load_collated_data(path: Path = data_path) -> pd.DataFrame:
             if col not in df.columns:
                 df[col] = ""
         df = df[columns]
-
+        df["description"] = df["description"].fillna("").astype(str)
         df = df[~df["transaction_id"].astype(str).str.startswith(fallback_id_prefix)]
         df = df.reset_index(drop=True)
 
