@@ -6,13 +6,6 @@ from functools import lru_cache
 from typing import Dict, Iterable, List, Optional, Tuple
 from nltk.corpus import stopwords, wordnet
 
-# Naming Convention
-# lower full - definition
-# 1st lower and rest Uppper no underscore - system variables
-# 1st lower and rest Uppper with underscore - ???
-# Full Upper no underscore - user input
-# Full Upper with Underscroe - Stored Arrays
-
 def ensurewordnet() -> None: ##Check if wordnet is downloaded, else will download. Nothing expected to return
     try:
         wordnet.synsets("bird")
@@ -70,6 +63,7 @@ def categorysynsets(category: str) -> tuple:
     return tuple(synsets)
 
 #Return (best_category, score) for a description or (None, 0.0)
+@lru_cache(maxsize=1024)
 def matchcategory(description: str, categories: Iterable[str]) -> Tuple[Optional[str], float]: 
     threshold: float = 0.2
     words = {
