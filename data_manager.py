@@ -36,11 +36,13 @@ audit_columns = [
     "old_category",
     "old_transaction_amount",
     "old_transaction_type",
+    "old_description",
     "new_date_and_time",
     "new_retailer",
     "new_category",
     "new_transaction_amount",
     "new_transaction_type",
+    "new_description",
 ]
 
 fallback_id_prefix = "TXN-ERR"
@@ -239,12 +241,14 @@ def record_audit(
         "old_category": old_data.get("category", ""),
         "old_transaction_amount": old_data.get("transaction_amount", ""),
         "old_transaction_type": old_data.get("transaction_type", ""),
+        "old_description": old_data.get("description", ""),
 
         "new_date_and_time": new_data.get("date_and_time", ""),
         "new_retailer": new_data.get("retailer", ""),
         "new_category": new_data.get("category", ""),
         "new_transaction_amount": new_data.get("transaction_amount", ""),
         "new_transaction_type": new_data.get("transaction_type", ""),
+        "new_description": new_data.get("description", ""),
     }
 
     new_row = pd.DataFrame([audit_record], columns=audit_columns)
