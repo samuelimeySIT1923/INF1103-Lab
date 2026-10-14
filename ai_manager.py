@@ -89,6 +89,11 @@ def validate_schema(data: Any) -> Tuple[bool, str]:
             f"must be one of {allowed_categories}."
         )
 
+    required = [c for c in model_columns if c != "description"]
+    for col in required:
+        if col not in data:
+            return False, f"Missing required column: '{col}'"
+
     return True, "Schema validated"
 
 
@@ -111,6 +116,7 @@ def _normalise(record: Dict[str, Any]) -> Dict[str, Any]:
     clean = {"transaction_id": ""}
     clean.update({col: record[col] for col in model_columns})
     clean["transaction_amount"] = round(abs(float(clean["transaction_amount"])), 2)
+    clean["description"] = str(clean["description"] or "")
     return clean
 
 
@@ -159,6 +165,7 @@ _schema_block = """{{
   "category": "Exactly one of: {categories}",
   "transaction_amount": <positive float>,
   "transaction_type": "Exactly one of: {types}"
+  "description": "Short note on what the payment was for (empty string if unknown)"
 }}"""
 
 _rules = """Rules:
