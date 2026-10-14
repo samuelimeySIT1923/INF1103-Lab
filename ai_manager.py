@@ -32,6 +32,7 @@ model_columns = [
     "category",
     "transaction_amount",
     "transaction_type",
+    "description",
 ]
 
 output_columns = ["transaction_id"] + model_columns
