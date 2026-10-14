@@ -564,6 +564,7 @@ with tab2:
                 if st.button("Apply category", key=f"misc_apply_{tid}"):
                     old_transaction = row.to_dict()
                     df.loc[df["transaction_id"] == tid, "category"] = chosen
+                    df.loc[df["transaction_id"] == tid, "description"] = desc.strip()
                     new_transaction = df[df["transaction_id"] == tid].iloc[0].to_dict()
 
                     record_audit(
