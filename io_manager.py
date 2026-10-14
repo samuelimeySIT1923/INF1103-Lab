@@ -325,6 +325,7 @@ with tab2:
                     add_retailer = st.text_input("Retailer", value="General Merchant")
                 with col2:
                     add_amount = st.number_input("Amount (S$)", min_value=0.01, step=1.0, format="%.2f")
+                    add_description = st.text_input("Description (optional)")
 
                 submit_add = st.form_submit_button("Save Transaction")
 
@@ -359,6 +360,7 @@ with tab2:
                         "category": final_add_cat,
                         "transaction_amount": float(add_amount),
                         "transaction_type": add_type,
+                        "description": add_description.strip(),
                     }
                     df = save_collated_data([new_rec])
                     st.success("New transaction successfully recorded!")
@@ -419,6 +421,16 @@ with tab2:
                                 key=f"confirm_cat_{selected_id}"
                             )
 
+                    edit_description = st.text_input("Description (optional)",
+                                                value=str(selected_row["description"]),
+                                                key=f"edit_desc_{selected_id}",
+                                                )
+
+                    if edit_description.strip():
+                                match, score = matchcategory(edit_description, tuple(registered_categories))
+                                if match and match != current_cat: #"Change the Category if it rematch
+                                    st.info(f"Suggested category: **{match}** (similarity {score:.2f}). ")
+
                     with st.form("edit_transaction_form"):
                         col1, col2 = st.columns(2)
                         with col1:
@@ -478,6 +490,7 @@ with tab2:
                                 "category": final_cat,
                                 "transaction_amount": float(edit_amount),
                                 "transaction_type": edit_type,
+                                "description": edit_description.strip(),
                             }
 
                             # Check whether any values actually changed
@@ -526,7 +539,6 @@ with tab2:
                         st.success(f"Transaction {selected_id} archived!")
                         st.rerun()
 
-
 #-----------------------------------------------------------------------------------#
 #Get Description and Recategorise based on it
     with st.expander("Review 'Misc' transactions"): #call any misc categories
@@ -545,7 +557,7 @@ with tab2:
                 )
                 if not desc.strip(): #no description = next item
                     continue
-                match, score = matchcategory(desc, suggest_cats) #get score & determine if match preexisting 
+                match, score = matchcategory(desc, tuple(suggest_cats)) #get score & determine if match preexisting 
                 if match:
                     st.caption(f"Suggested category: **{match}** (similarity {score:.2f})")
                     default_idx = suggest_cats.index(match) #matach = set new category
