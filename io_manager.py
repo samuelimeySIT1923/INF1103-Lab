@@ -7,7 +7,6 @@ import math
 
 import pandas as pd
 import plotly.express as px
-import pypdf
 import streamlit as st
 
 from InputDescription import matchcategory
@@ -56,18 +55,6 @@ def parse_uploaded_file(uploaded_file: Any) -> List[Any]:
             else:
                 items.append(content)
 
-        elif fname.endswith(".pdf"):
-            reader = pypdf.PdfReader(uploaded_file)
-            for page in reader.pages:
-                text = page.extract_text()
-                if text:
-                    lines = [
-                        line.strip()
-                        for line in text.splitlines()
-                        if len(line.strip()) > 5
-                    ]
-                    items.extend(lines)
-
     except Exception as exc:
         st.error(f"Error reading file '{uploaded_file.name}': {exc}")
 
@@ -115,7 +102,7 @@ with tab1:
             all_standardized = []
 
             with st.spinner("Processing uploaded files..."):
-                for file in file_uploaded:
+                for file in [file_uploaded]:
                     fname = file.name.lower()
 
                     # Branch 1: CSV and JSON files
@@ -758,15 +745,6 @@ with tab2:
                         "⚠️ **High Bills Burden**: "
                         "Bills spending exceeds 5% of monthly income."
                     )
-
-                # irregular income rule: monthly income varies by more than 20%
-                if irregular_income(df):
-                    st.warning(
-                        "⚠️ **Irregular Income**: Your income over the last 3 months varies "
-                        "by more than 20% of its average. Consider a flexible budget and "
-                        "keeping a larger financial buffer."
-                    )
-
 
                 # Subscription creep rule: subscriptions in the last 30 days
                 if subscription_creep(m_inc, cashflow_df):
