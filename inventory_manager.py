@@ -11,7 +11,7 @@ def find_product(products, product_id):
     for product in products: # Return the matching product dictionary, or None if there is no match.
         if product["id"] == product_id:
             return Product
-        return None # only after the whole list has been checked
+    return None # only after the whole list has been checked
 
 #Common Function 2 -  Append one entry to the transaction history (never overwritten).
 def record_transaction(transactions, product_id, change, kind):
@@ -32,8 +32,7 @@ def read_number(prompt, cast, minimum=0):
                 print(f"Value must be at least {minimum}.")
                 continue
             return value
-        #not number = reject
-        except ValueError:
+        except ValueError:        #not number = reject
             print("Invalid input. Please enter a number.")
 
 
@@ -73,9 +72,9 @@ class Product:
         self.__product_id, self.__name, self.__price, self.__stock = product_id, name, price, stock
 
     #2.3.1 Update Stock [3]
-    def update_stock(self):
+    def update_stock(products, transactions):
         print("\nUpdate Stock")
-        product = find_product(self, input("Enter Product ID: ").strip())
+        product = find_product(products, input("Enter Product ID: ").strip())
         if product is None:
             print("Product not found.")
             return
@@ -85,7 +84,7 @@ class Product:
         new_stock = read_number("New Stock Quantity: ", int)
         change = new_stock - product["stock"]
         product["stock"] = new_stock
-        self.record_transaction(product["id"], change, "update")
+        record_transaction(transactions, product["id"], change, "update")
         print("Stock updated successfully!")
 
 
@@ -130,7 +129,7 @@ class Inventory:
         stock = read_number("Stock Quantity: ", int) #stock in int, whole number only
         self.append({"id": product_id, "name": name,
                       "price": price, "stock": stock})     #add on in list
-        self.record_transaction(self.__transactions, product_id, stock, "add")
+        record_transaction(self.__transactions, product_id, stock, "add")
         print("Product added successfully!")
 
   ##2.6.3 Search for a Product [4] <Find Within whole list>
@@ -185,7 +184,7 @@ def main(self):
         elif choice == "2":
             self.inventory.add_product()
         elif choice == "3":
-            self.inventory.update_stock(self.inventory, self.transactions)
+            Product.update_stock(self.inventory, self.transactions)
         elif choice == "4":
             self.inventory.search_product()
         elif choice == "5":
