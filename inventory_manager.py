@@ -6,12 +6,36 @@ FILENAME = "inventory.json"
 SEPARATOR_WIDTH = 48 #X dashes printed for formatting
 
 
-#Common function - Used to check for matching products ID in Add Product, Update Stock and Search Product
+#Common function 1 - Used to check for matching products ID in Add Product, Update Stock and Search Product
 def find_product(products, product_id):
     for product in products: # Return the matching product dictionary, or None if there is no match.
         if product["id"] == product_id:
             return Product
         return None # only after the whole list has been checked
+
+#Common Function 2 -  Append one entry to the transaction history (never overwritten).
+def record_transaction(product_id, change, kind):
+        transactions.append({
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "product_id": product_id,
+            "type": kind,
+            "change": change,
+        })
+
+#Common Function 3 - Read number input with validation
+def read_number(prompt, cast, minimum=0):
+    #Keep asking until the user enters a valid number >= minimum.
+    while True:
+        try:
+            value = cast(input(prompt))
+            #less than 0 = reject
+            if value < minimum:
+                print(f"Value must be at least {minimum}.")
+                continue
+            return value
+        #not number = reject
+        except ValueError:
+            print("Invalid input. Please enter a number.")
 
 
 #2.8.1 Create the FileHandling Class - Load & Save Inventory .json file
@@ -78,7 +102,7 @@ class Inventory:
         # Returns an iterator for the products list
         return iter(self.__products)
 
-    #append - 
+    #append - Allow add on to existing data
     def append(self, product):
         self.__products.append(product)
 
@@ -94,26 +118,26 @@ class Inventory:
                   f"Price: ${p['price']:.2f} | Stock: {p['stock']}")
         print("-" * SEPARATOR_WIDTH) 
 
-    #2.8.1 Add Product [2] <Need to add on to whole existing list>
+    #2.6.2 Add Product [2] <Need to add on to whole existing list>
     def add_product(self):
         print("\nAdd New Product")
-        self.__product_id = input("Product ID: ").strip() #remove white spaces from input
+        product_id = input("Product ID: ").strip() #remove white spaces from input
         if not self.__product_id: #ERROR handling: no blank id
             print("Product ID cannot be empty.")
             return
-        if FindProduct(self, self.__product_id): #ERROR handling: no same id
+        if find_product(self, product_id): #ERROR handling: no same id
             print("Product ID already exists.")
             return
-        self.__name = input("Product Name: ").strip() #remove white spaces from input
-        self.__price = self.read_number("Price: ", float) #price in float, accept decimal (Cents)
-        self.__stock = self.read_number("Stock Quantity: ", int) #stock in int, whole number only
-    #add on in list
-        Product.append({"id": self.__product_id, "name": self.__name,
-                      "price": self.__price, "stock": self.__stock})
+        name = input("Product Name: ").strip() #remove white spaces from input
+        price = self.read_number("Price: ", float) #price in float, accept decimal (Cents)
+        stock = self.read_number("Stock Quantity: ", int) #stock in int, whole number only
+        self.append({"id": product_id, "name": name,
+                      "price": price, "stock": stock})     #add on in list
         self.record_transaction(transactions, self.__product_id, self.__stock, "add")
+        self.record_transaction(product["id"], change, "update")
         print("Product added successfully!")
 
-  ##2.3.3 Search for a Product [4] <Find Within whole list>
+  ##2.6.3 Search for a Product [4] <Find Within whole list>
     def search_product(self):
         print("\nSearch Product")
         product = find_product(self, input("Enter Product ID: ").strip())
@@ -128,38 +152,15 @@ class Inventory:
         print(f"Stock: {product['stock']}")
         print("-" * SEPARATOR_WIDTH)
 
-    def record_transaction(self, change, kind):
-    #Append one entry to the transaction history (never overwritten).
-    #format Time, id, type, stock qty
-    Inventory.append({
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "product_id": self.__product_id,
-        "type": kind,
-        "change": change,
-    })
 
-#2c Read number input with validation
-    def read_number(prompt, cast, minimum=0):
-        #Keep asking until the user enters a valid number >= minimum.
-        while True:
-            try:
-                value = cast(input(prompt))
-                #less than 0 = reject
-                if value < minimum:
-                    print(f"Value must be at least {minimum}.")
-                    continue
-                return value
-            #not number = reject
-            except ValueError:
-                print("Invalid input. Please enter a number.")
-
-
-#2.8.1 Create the MainProgram Class - Main menu & startup
+#2.8.2 Create the MainProgram Class - Main menu & startup
 class MainProgram:
     def __init__(self):
+        self.file_handler = FileHandling()
+        products, self.transactions = self.file_handler.load_inventory()
+        self.inventory = Inventory(products, self.transactions)
 
-    #4 Menu System <4> Build a Menu System:  Create menu options for Display, Add, Update, Search, Save and Exit.
-#4a Show menu options
+#2.8.2.1 Menu System - Create menu options for Display, Add, Update, Search, Save and Exit.
 def show_menu():
     print("\n----------- MENU -----------")
     print("1. Display All Products")
@@ -169,9 +170,13 @@ def show_menu():
     print("5. Save Inventory")
     print("6. Exit")
     print("-----------------------------")
- 
- #4b Main startup screen
-def main():
+
+#2.8.2.2 Common Function within = Save Inventory 
+    def save(self):
+        self.file_handler.save_inventory(self.inventory, self.transactions)
+
+#2.8.2.3 Main startup screen [Screen Input for 1-6]
+def main(self):
     print("=" * SEPARATOR_WIDTH)
     print("INVENTORY MANAGEMENT SYSTEM")
     print("=" * SEPARATOR_WIDTH) 
@@ -181,19 +186,19 @@ def main():
         show_menu()
         choice = input("Enter option: ").strip()
         if choice == "1":
-            display_all(inventory)
+            self.inventory.display_all()
         elif choice == "2":
-            add_product(inventory, transactions)
+            self.inventory.add_product()
         elif choice == "3":
-            update_stock(inventory, transactions)
+            self.inventory.Update_stock()
         elif choice == "4":
-            search_product(inventory)
+            self.inventory.search_product()
         elif choice == "5":
             print("Saving inventory...")
-            save_inventory(inventory, transactions)
+            self.save()
         elif choice == "6":
             print("Saving inventory before exit...")
-            save_inventory(inventory, transactions)
+            self.save()
             print("Thank you for using Inventory Management System.")
             print("Program terminated.")
             break
