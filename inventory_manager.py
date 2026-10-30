@@ -5,99 +5,96 @@ from datetime import datetime
 FILENAME = "inventory.json"
 SEPARATOR_WIDTH = 48 #X dashes printed for formatting
 
-#2.8 Create the FileHandling Class - Load & Save Inventory .json file
+
+#Common function - Used to check for matching products ID in Add Product, Update Stock and Search Product
+def find_product(products, product_id):
+    for product in products: # Return the matching product dictionary, or None if there is no match.
+        if product["id"] == product_id:
+            return Product
+        return None # only after the whole list has been checked
+
+
+#2.8.1 Create the FileHandling Class - Load & Save Inventory .json file
 class FileHandling:
     def __init__(self, filename=FILENAME):
-        self.filename = filename
+        self.__filename = filename
 
     #Find json file and load it if it exists, otherwise start with an empty inventory.
     def load_inventory(self):
     #Load data from inventory.json if it exists, otherwise start empty.
     #<3i> Check whether inventory.json exists. Create load_inventory() to load inventory.json if it exists.
-        if os.path.exists(self.filename):
-            try:
-                #read file and load data
-                with open(self.filename, "r") as f:
+        if os.path.exists(self.__filename):
+            try: #try to load file, will not crash if unable to
+                with open(self.__filename, "r") as f:
                     data = json.load(f)
-                print(f"{self.filename} found. Inventory loaded successfully.")
-                #call data with products, transactions
-                return data["products"], data.get("transactions", [])
-            #ERROR HANDLING: fallback if cannot use file
-            except (json.JSONDecodeError, KeyError, TypeError):
-                print(f"{self.filename} is corrupted. Starting with empty inventory.")
+                print(f"{self.__filename} found. Inventory loaded successfully.")
+                return data["products"], data.get("transactions", []) #call data with products, transactions
+            except (json.JSONDecodeError, KeyError, TypeError): #ERROR HANDLING: fallback if cannot use file
+                print(f"{self.__filename} is corrupted. Starting with empty inventory.")
         else:
-            print(f"{self.filename} not found. Starting with empty inventory.")
-        #empty inventory and transaction history Fallback
-        return [], []
+            print(f"{self.__filename} not found. Starting with empty inventory.")
+        return [], [] #empty inventory and transaction history Fallback
 
-    #Save the inventory and transaction history to inventory.json
-    def save_inventory(self, transactions):
-    #Save products and the full transaction history to inventory.json. will override
+    #Save the products and full transaction history to inventory.json. Will override
+    def save_inventory(self, products, transactions):
         try:
-            with open(self.filename, "w") as f:
-                json.dump({"products": Inventory, "transactions": transactions}, f, indent=4)
-            print(f"Inventory saved successfully to {FILENAME}.")
+            with open(self.__filename, "w") as f:
+                json.dump({"products": list(products), "transactions": transactions}, f, indent=4)
+            print(f"Inventory saved successfully to {self.__filename}.")
         except OSError as e:
-            print(f"Could not save to {self.filename}: {e}")
+            print(f"Could not save to {self.__filename}: {e}")
 
 
-#Common Class - Used to check for matching products ID in Add Product, Update Stock and Search Product
-class FindProduct:
-    def __init__(self, inventory, product_id):
-        for Product in inventory:
-            if Product.matches_id(product_id):
-                return Product
-            return None
-
-
-#2.3 Create the Product Class - Read Only: Show Overall List of Products + Search Product
+#2.3 Create the Product Class - Handle Single Product Only
 class Product:
-    def __init__(self, products=None):
-        # Each product is a dictionary with id, name, price, and stock
-        self.__products = products if products is not None else []
+    def __init__(self, product_id, name, price, stock): # Each product is a dictionary with id, name, price, and stock
+        self.__product_id, self.__name, self.__price, self.__stock = product_id, name, price, stock
+
+    #2.3.1 Add Product [2]
+    def update_stock(self):
+        print("\nUpdate Stock")
+        product = find_product(self, input("Enter Product ID: ").strip())
+        if product is None:
+            print("Product not found.")
+            return
+        print("Product Found:")
+        print(f"Name: {product['self.__name']}")
+        print(f"Current Stock: {product['self.__stock']}")
+        new_stock = self.read_number("New Stock Quantity: ", int)
+        change = new_stock - product["self.__stock"]
+        product["self.__stock"] = new_stock
+        self.record_transaction(product["id"], change, "update")
+        print("Stock updated successfully!")
+
+
+#2.6 Create the Inventory Class - Amendable: Add Product + Update Stock
+class Inventory:
+    def __init__(self, products, transactions):
+        self.__products = products if products is not None else [] #return empty if no products
+        self.__transactions = transactions if transactions is not None else [] # list of transaction 
 
     #iter -  allow instances of class to be used directly inside loops & lists
     def __iter__(self):
         # Returns an iterator for the products list
         return iter(self.__products)
 
-    # 3 Core functions - inventory: 
+    #append - 
+    def append(self, product):
+        self.__products.append(product)
+
+    #2.6.1 Display all Products [1]
     def display_all(self):
         print("\nCurrent Inventory")
-        print("-" * self.SEPARATOR_WIDTH) 
+        print("-" * SEPARATOR_WIDTH) 
         if not self.__products: #nothing in inventory
             print("No products in inventory.")
     # Represent inventory items using dictionaries and store at least three products in a list. 
         for p in self.__products: #loop for each product in inventory and print details
-            print(f"ID: {p[self.__product_id]} | Name: {p[self.__name]} | "
-                    f"Price: ${p[self.__price]:.2f} | Stock: {p[self.__stock]}")
-        print("-" * self.SEPARATOR_WIDTH) 
+            print(f"ID: {p['id']} | Name: {p['name']} | "
+                  f"Price: ${p['price']:.2f} | Stock: {p['stock']}")
+        print("-" * SEPARATOR_WIDTH) 
 
-  #3d Add a new product <2iii> search_product()
-    def search_product(self):
-        print("\nSearch Product")
-        product = FindProduct(self, input("Enter Product ID: ").strip())
-        if product is None:
-            print("Product not found.")
-            return
-        print("Product Found")
-        print("-" * SEPARATOR_WIDTH)
-        print(f"ID: {self.__product_id}")
-        print(f"Name: {self.__name}")
-        print(f"Price: ${self.__price:.2f}")
-        print(f"Stock: {self.__stock}")
-        print("-" * SEPARATOR_WIDTH)
-
-
-#2.8 Create the Inventory Class - Amendable: Add Product + Update Stock
-class Inventory:
-    def __init__(self, product_id, name, price, stock):
-        self.__product_id = product_id 
-        self.__name = name
-        self.__price = price
-        self.__stock = stock
-
-    #3b Add a new product <2i> add_product()
+    #2.8.1 Add Product [2] <Need to add on to whole existing list>
     def add_product(self):
         print("\nAdd New Product")
         self.__product_id = input("Product ID: ").strip() #remove white spaces from input
@@ -116,20 +113,20 @@ class Inventory:
         self.record_transaction(transactions, self.__product_id, self.__stock, "add")
         print("Product added successfully!")
 
-    def update_stock(self):
-        print("\nUpdate Stock")
-        self.__products = FindProduct(self, input("Enter Product ID: ").strip())
-        if self.__products is None:
+  ##2.3.3 Search for a Product [4] <Find Within whole list>
+    def search_product(self):
+        print("\nSearch Product")
+        product = find_product(self, input("Enter Product ID: ").strip())
+        if product is None:
             print("Product not found.")
             return
-        print("Product Found:")
-        print(f"Name: {Product[self.__name]}")
-        print(f"Current Stock: {product['stock']}")
-        self.__new_stock = self.read_number("New Stock Quantity: ", int)
-        self.__change = new_stock - product["stock"]
-        self.__product["stock"] = new_stock
-        record_transaction(transactions, product["id"], change, "update")
-    print("Stock updated successfully!")  
+        print("Product Found")
+        print("-" * SEPARATOR_WIDTH)
+        print(f"ID: {product['id']}")
+        print(f"Name: {product['name']}")
+        print(f"Price: ${product['price']:.2f}")
+        print(f"Stock: {product['stock']}")
+        print("-" * SEPARATOR_WIDTH)
 
     def record_transaction(self, change, kind):
     #Append one entry to the transaction history (never overwritten).
@@ -157,10 +154,10 @@ class Inventory:
                 print("Invalid input. Please enter a number.")
 
 
-#Common Class - Used to check for matching products ID in Add Product, Update Stock and Search Product
+#2.8.1 Create the MainProgram Class - Main menu & startup
 class MainProgram:
     def __init__(self):
-            
+
     #4 Menu System <4> Build a Menu System:  Create menu options for Display, Add, Update, Search, Save and Exit.
 #4a Show menu options
 def show_menu():
