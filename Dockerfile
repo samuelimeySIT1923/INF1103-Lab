@@ -1,15 +1,7 @@
 FROM python:3.14-slim
 
 WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-RUN python -m nltk.downloader wordnet omw-1.4 stopwords
-
-COPY ai_manager.py data_manager.py io_manager.py logic_manager.py InputDescription.py ./
-COPY tests/ tests/
-COPY data/ data/
-
-EXPOSE 8501
-
-CMD ["python", "-m", "streamlit", "run", "io_manager.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true"]
+COPY inventory_manager.py .
+COPY inventory.json .
+CMD ["python", "inventory_manager.py"]
+ENTRYPOINT ["python", "-u", "inventory_manager.py"]
