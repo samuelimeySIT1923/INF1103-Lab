@@ -14,7 +14,7 @@ def find_product(products, product_id):
         return None # only after the whole list has been checked
 
 #Common Function 2 -  Append one entry to the transaction history (never overwritten).
-def record_transaction(product_id, change, kind):
+def record_transaction(transactions, product_id, change, kind):
         transactions.append({
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "product_id": product_id,
@@ -28,8 +28,7 @@ def read_number(prompt, cast, minimum=0):
     while True:
         try:
             value = cast(input(prompt))
-            #less than 0 = reject
-            if value < minimum:
+            if value < minimum: #less than 0 = reject
                 print(f"Value must be at least {minimum}.")
                 continue
             return value
@@ -45,8 +44,7 @@ class FileHandling:
 
     #Find json file and load it if it exists, otherwise start with an empty inventory.
     def load_inventory(self):
-    #Load data from inventory.json if it exists, otherwise start empty.
-    #<3i> Check whether inventory.json exists. Create load_inventory() to load inventory.json if it exists.
+    #Load data from inventory.json if it exists, otherwise create new inventory.json and start empty.
         if os.path.exists(self.__filename):
             try: #try to load file, will not crash if unable to
                 with open(self.__filename, "r") as f:
@@ -74,7 +72,7 @@ class Product:
     def __init__(self, product_id, name, price, stock): # Each product is a dictionary with id, name, price, and stock
         self.__product_id, self.__name, self.__price, self.__stock = product_id, name, price, stock
 
-    #2.3.1 Add Product [2]
+    #2.3.1 Update Stock [3]
     def update_stock(self):
         print("\nUpdate Stock")
         product = find_product(self, input("Enter Product ID: ").strip())
@@ -82,11 +80,11 @@ class Product:
             print("Product not found.")
             return
         print("Product Found:")
-        print(f"Name: {product['self.__name']}")
-        print(f"Current Stock: {product['self.__stock']}")
-        new_stock = self.read_number("New Stock Quantity: ", int)
-        change = new_stock - product["self.__stock"]
-        product["self.__stock"] = new_stock
+        print(f"Name: {product['name']}")
+        print(f"Current Stock: {product['stock']}")
+        new_stock = read_number("New Stock Quantity: ", int)
+        change = new_stock - product["stock"]
+        product["stock"] = new_stock
         self.record_transaction(product["id"], change, "update")
         print("Stock updated successfully!")
 
@@ -99,8 +97,7 @@ class Inventory:
 
     #iter -  allow instances of class to be used directly inside loops & lists
     def __iter__(self):
-        # Returns an iterator for the products list
-        return iter(self.__products)
+        return iter(self.__products) # Returns an iterator for the products list
 
     #append - Allow add on to existing data
     def append(self, product):
@@ -122,19 +119,18 @@ class Inventory:
     def add_product(self):
         print("\nAdd New Product")
         product_id = input("Product ID: ").strip() #remove white spaces from input
-        if not self.__product_id: #ERROR handling: no blank id
+        if not product_id: #ERROR handling: no blank id
             print("Product ID cannot be empty.")
             return
         if find_product(self, product_id): #ERROR handling: no same id
             print("Product ID already exists.")
             return
         name = input("Product Name: ").strip() #remove white spaces from input
-        price = self.read_number("Price: ", float) #price in float, accept decimal (Cents)
-        stock = self.read_number("Stock Quantity: ", int) #stock in int, whole number only
+        price = read_number("Price: ", float) #price in float, accept decimal (Cents)
+        stock = read_number("Stock Quantity: ", int) #stock in int, whole number only
         self.append({"id": product_id, "name": name,
                       "price": price, "stock": stock})     #add on in list
-        self.record_transaction(transactions, self.__product_id, self.__stock, "add")
-        self.record_transaction(product["id"], change, "update")
+        self.record_transaction(self.__transactions, product_id, stock, "add")
         print("Product added successfully!")
 
   ##2.6.3 Search for a Product [4] <Find Within whole list>
@@ -147,9 +143,9 @@ class Inventory:
         print("Product Found")
         print("-" * SEPARATOR_WIDTH)
         print(f"ID: {product['id']}")
-        print(f"Name: {product['name']}")
-        print(f"Price: ${product['price']:.2f}")
-        print(f"Stock: {product['stock']}")
+        print(f"Name: {product['self.__name']}")
+        print(f"Price: ${product['self.__price']:.2f}")
+        print(f"Stock: {product['self.__stock']}")
         print("-" * SEPARATOR_WIDTH)
 
 
@@ -180,8 +176,7 @@ def main(self):
     print("=" * SEPARATOR_WIDTH)
     print("INVENTORY MANAGEMENT SYSTEM")
     print("=" * SEPARATOR_WIDTH) 
-    inventory, transactions = load_inventory()
- #accept input 1-6
+    #accept input 1-6
     while True:
         show_menu()
         choice = input("Enter option: ").strip()
@@ -190,7 +185,7 @@ def main(self):
         elif choice == "2":
             self.inventory.add_product()
         elif choice == "3":
-            self.inventory.Update_stock()
+            self.inventory.update_stock(self.inventory, self.transactions)
         elif choice == "4":
             self.inventory.search_product()
         elif choice == "5":
@@ -209,4 +204,4 @@ def main(self):
  
  #Guard to ensure program launches directly when run as a script, not when imported as a module. External Code
 if __name__ == "__main__":
-    main()
+    MainProgram().main()
