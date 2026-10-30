@@ -10,7 +10,7 @@ SEPARATOR_WIDTH = 48 #X dashes printed for formatting
 def find_product(products, product_id):
     for product in products: # Return the matching product dictionary, or None if there is no match.
         if product["id"] == product_id:
-            return Product
+            return product
     return None # only after the whole list has been checked
 
 #Common Function 2 -  Append one entry to the transaction history (never overwritten).
@@ -142,11 +142,10 @@ class Inventory:
         print("Product Found")
         print("-" * SEPARATOR_WIDTH)
         print(f"ID: {product['id']}")
-        print(f"Name: {product['self.__name']}")
-        print(f"Price: ${product['self.__price']:.2f}")
-        print(f"Stock: {product['self.__stock']}")
+        print(f"Name: {product['name']}")
+        print(f"Price: ${product['price']:.2f}")
+        print(f"Stock: {product['stock']}")
         print("-" * SEPARATOR_WIDTH)
-
 
 #2.8.2 Create the MainProgram Class - Main menu & startup
 class MainProgram:
@@ -155,52 +154,52 @@ class MainProgram:
         products, self.transactions = self.file_handler.load_inventory()
         self.inventory = Inventory(products, self.transactions)
 
-#2.8.2.1 Menu System - Create menu options for Display, Add, Update, Search, Save and Exit.
-def show_menu():
-    print("\n----------- MENU -----------")
-    print("1. Display All Products")
-    print("2. Add Product")
-    print("3. Update Stock")
-    print("4. Search Product")
-    print("5. Save Inventory")
-    print("6. Exit")
-    print("-----------------------------")
+    #2.8.2.1 Menu System - Create menu options for Display, Add, Update, Search, Save and Exit.
+    def show_menu(self):
+        print("\n----------- MENU -----------")
+        print("1. Display All Products")
+        print("2. Add Product")
+        print("3. Update Stock")
+        print("4. Search Product")
+        print("5. Save Inventory")
+        print("6. Exit")
+        print("-----------------------------")
 
-#2.8.2.2 Common Function within = Save Inventory 
+    #2.8.2.2 Common Function within = Save Inventory
     def save(self):
         self.file_handler.save_inventory(self.inventory, self.transactions)
 
-#2.8.2.3 Main startup screen [Screen Input for 1-6]
-def main(self):
-    print("=" * SEPARATOR_WIDTH)
-    print("INVENTORY MANAGEMENT SYSTEM")
-    print("=" * SEPARATOR_WIDTH) 
-    #accept input 1-6
-    while True:
-        show_menu()
-        choice = input("Enter option: ").strip()
-        if choice == "1":
-            self.inventory.display_all()
-        elif choice == "2":
-            self.inventory.add_product()
-        elif choice == "3":
-            Product.update_stock(self.inventory, self.transactions)
-        elif choice == "4":
-            self.inventory.search_product()
-        elif choice == "5":
-            print("Saving inventory...")
-            self.save()
-        elif choice == "6":
-            print("Saving inventory before exit...")
-            self.save()
-            print("Thank you for using Inventory Management System.")
-            print("Program terminated.")
-            break
-        else:
-            #ERROR handling: invalid input beyond 1-6
-            print("Invalid option. Please choose 1-6.")
+    #2.8.2.3 Main startup screen [Screen Input for 1-6]
+    def main(self):
+        print("=" * SEPARATOR_WIDTH)
+        print("INVENTORY MANAGEMENT SYSTEM")
+        print("=" * SEPARATOR_WIDTH)
+        #accept input 1-6
+        while True:
+            self.show_menu()
+            choice = input("Enter option: ").strip()
+            if choice == "1":
+                self.inventory.display_all()
+            elif choice == "2":
+                self.inventory.add_product()
+            elif choice == "3":
+                Product.update_stock(self.inventory, self.transactions)
+            elif choice == "4":
+                self.inventory.search_product()
+            elif choice == "5":
+                print("Saving inventory...")
+                self.save()
+            elif choice == "6":
+                print("Saving inventory before exit...")
+                self.save()
+                print("Thank you for using Inventory Management System.")
+                print("Program terminated.")
+                break
+            else:
+                #ERROR handling: invalid input beyond 1-6
+                print("Invalid option. Please choose 1-6.")
 
- 
- #Guard to ensure program launches directly when run as a script, not when imported as a module. External Code
+
+  #Guard to ensure program launches directly when run as a script, not when imported as a module. External Code
 if __name__ == "__main__":
     MainProgram().main()
