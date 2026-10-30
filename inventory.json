@@ -1,0 +1,78 @@
+{
+    "products": [
+        {
+            "id": "00001",
+            "name": "Mouse",
+            "price": 50.0,
+            "stock": 0
+        },
+        {
+            "id": "00002",
+            "name": "Cats",
+            "price": 200.0,
+            "stock": 25
+        },
+        {
+            "id": "00003",
+            "name": "Dog",
+            "price": 200.0,
+            "stock": 50
+        },
+        {
+            "id": "00004",
+            "name": "Fish",
+            "price": 5.0,
+            "stock": 500
+        }
+    ],
+    "transactions": [
+        {
+            "time": "2026-10-29 18:47:28",
+            "product_id": "00001",
+            "type": "add",
+            "change": 100
+        },
+        {
+            "time": "2026-10-30 14:52:19",
+            "product_id": "00001",
+            "type": "update",
+            "change": -80
+        },
+        {
+            "time": "2026-10-30 08:57:39",
+            "product_id": "00002",
+            "type": "add",
+            "change": 50
+        },
+        {
+            "time": "2026-10-30 08:57:56",
+            "product_id": "00001",
+            "type": "update",
+            "change": -20
+        },
+        {
+            "time": "2026-10-30 09:03:26",
+            "product_id": "00003",
+            "type": "add",
+            "change": 75
+        },
+        {
+            "time": "2026-10-30 09:03:38",
+            "product_id": "00002",
+            "type": "update",
+            "change": -25
+        },
+        {
+            "time": "2026-10-30 09:11:47",
+            "product_id": "00004",
+            "type": "add",
+            "change": 500
+        },
+        {
+            "time": "2026-10-30 09:12:08",
+            "product_id": "00003",
+            "type": "update",
+            "change": -25
+        }
+    ]
+}

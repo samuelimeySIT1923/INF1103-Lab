@@ -1,0 +1,9 @@
+services:
+  streamlit-app:
+    build: .
+    ports:
+      - "6274:6274"
+    volumes:
+      - .:/app
+    environment:
+      - STREAMLIT_SERVER_HEADLESS=true

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+data/*.tmp
+data/*.corrupt-*
+.DS_Store
+data/audit_trail.csv
+.pytest_cache/
+*.tar
+git_history.txt
