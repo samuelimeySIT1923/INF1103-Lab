@@ -67,6 +67,13 @@ class FileHandling:
             print(f"Could not save to {self.__filename}: {e}")
 
 
+#4.1 CanBeShipped Interface
+class CanBeShipped(ABC):
+    @abstractmethod
+    def calculate_shipping_cost(self, weight):
+        pass
+
+
 #Product Class - Handle Single Product Only
 class Product(ABC):
     def __init__(self, product_id, name, price, stock):
@@ -96,9 +103,14 @@ class Product(ABC):
         print("Stock updated successfully!")
 
 #1.2 Create a PhysicalProduct class
-class PhysicalProduct (Product):
+class PhysicalProduct (Product, CanBeShipped):
+    BASE_SHIPPING_COST = 5.00  # Base shipping cost in dollars
+    COST_PER_KG = 2.00  # Cost per kilogram in dollars
+
     def __init__(self, product_id, name, price, stock, weight):
         super().__init__(product_id, name, price, stock)  # Reuse Product constructor
+        if weight < 0:  # Validate weight
+            raise ValueError("Weight cannot be negative.")
         self.weight = weight  # Initialize weight attribute
 
     def display_information(self):
@@ -109,6 +121,9 @@ class PhysicalProduct (Product):
 #3.2.1 Implement the required method [PhysicalProduct]
     def get_fulfilment_info(self):
         return f"Product {self.__name} will be require physical shipping."
+
+    def calculate_shipping_cost(self, weight):
+        return self.BASE_SHIPPING_COST + (self.COST_PER_KG * weight)
 
 
 #1.3 Create a DigitalProduct class
