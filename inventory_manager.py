@@ -87,6 +87,15 @@ class Product:
         record_transaction(transactions, product["id"], change, "update")
         print("Stock updated successfully!")
 
+class PhysicalProduct (Product):
+    def __init__(self, product_id, name, price, stock, weight):
+        super().__init__(product_id, name, price, stock)  # Reuse Product constructor
+        self.weight = weight  # Initialize weight attribute
+
+    def display_information(self):
+        print(f"ID: {self.__product_id} | Name: {self.__name} | "
+              f"Price: ${self.__price:.2f} | Stock: {self.__stock} | "
+              f"Weight: {self.weight} kg")
 
 #2.6 Create the Inventory Class - Amendable: Add Product + Update Stock
 class Inventory:
