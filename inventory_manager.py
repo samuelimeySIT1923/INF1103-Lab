@@ -36,6 +36,17 @@ def read_number(prompt, cast, minimum=0):
         except ValueError:        #not number = reject
             print("Invalid input. Please enter a number.")
 
+#Common Function 4 - Build the correct Product object from a saved dictionary (used when loading inventory.json)
+def create_product(data):
+    kind = data.get("type", "physical")
+    if kind == "physical":
+        return PhysicalProduct(data["id"], data["name"], data["price"],
+                               data["stock"], data.get("weight", 0.0))
+    if kind == "digital":
+        return DigitalProduct(data["id"], data["name"], data["price"],
+                              data["stock"], data["download_size"])
+    raise ValueError(f"Unknown product type: {kind}")
+
 
 #Create the FileHandling Class - Load & Save Inventory .json file
 class FileHandling:
@@ -49,9 +60,10 @@ class FileHandling:
             try: #try to load file, will not crash if unable to
                 with open(self.__filename, "r") as f:
                     data = json.load(f)
+                products = [create_product(item) for item in data["products"]]
                 print(f"{self.__filename} found. Inventory loaded successfully.")
-                return data["products"], data.get("transactions", []) #call data with products, transactions
-            except (json.JSONDecodeError, KeyError, TypeError): #ERROR HANDLING: fallback if cannot use file
+                return products, data.get("transactions", []) #call data with products, transactions
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError, AttributeError): #ERROR HANDLING: fallback if cannot use file
                 print(f"{self.__filename} is corrupted. Starting with empty inventory.")
         else:
             print(f"{self.__filename} not found. Starting with empty inventory.")
@@ -61,13 +73,13 @@ class FileHandling:
     def save_inventory(self, products, transactions):
         try:
             with open(self.__filename, "w") as f:
-                json.dump({"products": list(products), "transactions": transactions}, f, indent=4)
+                json.dump({"products": [p.to_dict() for p in products], "transactions": transactions}, f, indent=4)
             print(f"Inventory saved successfully to {self.__filename}.")
         except OSError as e:
             print(f"Could not save to {self.__filename}: {e}")
 
 
-#4.1 CanBeShipped Interface
+#4.1 CanBeShipped Interface <Functional Class>
 class CanBeShipped(ABC):
     @abstractmethod
     def calculate_shipping_cost(self, weight):
@@ -82,27 +94,38 @@ class Product(ABC):
         self.__price = price
         self.__stock = stock
 
+    #Read-only access so child classes (and Inventory) can use the private data
+    @property
+    def product_id(self):
+        return self.__product_id
+    @property
+    def name(self):
+        return self.__name
+    @property
+    def price(self):
+        return self.__price
+    @property
+    def stock(self):
+        return self.__stock
+
+    def get_details(self): #Regular Method - Children can extend from this method
+        return (f"ID: {self.__product_id} | Name: {self.__name} | "
+                f"Price: ${self.__price:.2f} | Stock: {self.__stock}")
+
+    def display_information(self):
+        print(self.get_details())
+
+    def to_dict(self):
+        return {"id": self.__product_id, "name": self.__name,
+                "price": self.__price, "stock": self.__stock}
+
     #3.1 Convert Product into an abstract class
     @abstractmethod
     def get_fulfilment_info(self):
         pass
-    #Update Stock [3]
-    def update_stock(products, transactions):
-        print("\nUpdate Stock")
-        product = find_product(products, input("Enter Product ID: ").strip())
-        if product is None:
-            print("Product not found.")
-            return
-        print("Product Found:")
-        print(f"Name: {product['name']}")
-        print(f"Current Stock: {product['stock']}")
-        new_stock = read_number("New Stock Quantity: ", int)
-        change = new_stock - product["stock"]
-        product["stock"] = new_stock
-        record_transaction(transactions, product["id"], change, "update")
-        print("Stock updated successfully!")
 
-#1.2 Create a PhysicalProduct class
+
+#1.2 Create a PhysicalProduct class (Parent, interface)
 class PhysicalProduct (Product, CanBeShipped):
     BASE_SHIPPING_COST = 5.00  # Base shipping cost in dollars
     COST_PER_KG = 2.00  # Cost per kilogram in dollars
@@ -111,17 +134,26 @@ class PhysicalProduct (Product, CanBeShipped):
         super().__init__(product_id, name, price, stock)  # Reuse Product constructor
         if weight < 0:  # Validate weight
             raise ValueError("Weight cannot be negative.")
-        self.weight = weight  # Initialize weight attribute
+        self.__weight = weight  # Initialize weight attribute
 
-    def display_information(self):
-        print(f"ID: {self.__product_id} | Name: {self.__name} | "
-              f"Price: ${self.__price:.2f} | Stock: {self.__stock} | "
-              f"Weight: {self.weight} kg")
+    @property
+    def weight(self):
+        return self.__weight
+
+    def get_details(self):
+        return f"{super().get_details()} | Type: Physical | Weight: {self.weight} kg"
+
+#Physical product object to Python dictionary - to be saved to Inventory.json
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "physical"
+        data["weight"] = self.weight
+        return data
 
 #3.2.1 Implement the required method [PhysicalProduct]
     def get_fulfilment_info(self):
-        return f"Product {self.__name} will be require physical shipping."
-
+        return f"Product {self.__name} will be require physical shipping. \nEstimated shipping cost: ${self.calculate_shipping_cost(self.weight):.2f}"
+    
     def calculate_shipping_cost(self, weight):
         return self.BASE_SHIPPING_COST + (self.COST_PER_KG * weight)
 
@@ -130,16 +162,27 @@ class PhysicalProduct (Product, CanBeShipped):
 class DigitalProduct(Product):
     def __init__(self, product_id, name, price, stock, download_size):
         super().__init__(product_id, name, price, stock)
-        self.download_size = download_size
+        if download_size < 0:  # Validate download size
+            raise ValueError("Download size cannot be negative.")
+        self.__download_size = download_size
 
-    def display_information(self):
-        print(f"ID: {self.__product_id} | Name: {self.__name} | "
-              f"Price: ${self.__price:.2f} | Stock: {self.__stock} | "
-              f"Download Size: {self.download_size} MB")
+    @property
+    def download_size(self):
+        return self.__download_size
+
+    def get_details(self):
+        return f"{super().get_details()} | Type: Digital | Download Size: {self.download_size} MB"
+
+#Digital product object to Python dictionary - to be saved to Inventory.json
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "digital"
+        data["download_size"] = self.download_size
+        return data
 
 #3.2.2 Implement the required method [DigitalProduct]
     def get_fulfilment_info(self):
-        return f"Product {self.__name} will be delivered to you digitally."
+        return f"Product {self.__name} will be delivered to you digitally. Download size: {self.download_size} MB"
 
 
 #Inventory Class - Amendable: Add Product + Update Stock
@@ -163,9 +206,8 @@ class Inventory:
         if not self.__products: #nothing in inventory
             print("No products in inventory.")
     # Represent inventory items using dictionaries and store at least three products in a list. 
-        for p in self.__products: #loop for each product in inventory and print details
-            print(f"ID: {p['id']} | Name: {p['name']} | "
-                  f"Price: ${p['price']:.2f} | Stock: {p['stock']}")
+        for product in self.__products: #loop for each product in inventory and print details
+            product.display_information()
         print("-" * SEPARATOR_WIDTH) 
 
     #Add Product [2] <Need to add on to whole existing list>
@@ -181,10 +223,38 @@ class Inventory:
         name = input("Product Name: ").strip() #remove white spaces from input
         price = read_number("Price: ", float) #price in float, accept decimal (Cents)
         stock = read_number("Stock Quantity: ", int) #stock in int, whole number only
-        self.append({"id": product_id, "name": name,
-                      "price": price, "stock": stock})     #add on in list
+        print (f"Select Product Type:\n1. Physical Product\n2. Digital Product")
+        while True:
+            product_type = input("Choose Product Type (1 or 2): ").strip()
+            if product_type == "1":
+                weight = read_number("Weight (kg): ", float)
+                product = PhysicalProduct(product_id, name, price, stock, weight)
+                break
+            elif product_type == "2":
+                download_size = read_number("Download Size (MB): ", float)
+                product = DigitalProduct(product_id, name, price, stock, download_size)
+                break
+            else:
+                print("Invalid option. Please choose 1 or 2.")
+        self.__products.append(product)
         record_transaction(self.__transactions, product_id, stock, "add")
         print("Product added successfully!")
+
+    #Update Stock [3]
+    def update_stock(self):
+        print("\nUpdate Stock")
+        product = find_product(self, input("Enter Product ID: ").strip())
+        if product is None:
+            print("Product not found.")
+            return
+        print("Product Found:")
+        print(f"Name: {product.name}")
+        print(f"Current Stock: {product.stock}")
+        new_stock = read_number("New Stock Quantity: ", int)
+        change = new_stock - product.stock
+        product["stock"] = new_stock
+        record_transaction(self.__transactions, product["id"], change, "update")
+        print("Stock updated successfully!")
 
   #Search for a Product [4] <Find Within whole list>
     def search_product(self):
@@ -195,10 +265,8 @@ class Inventory:
             return
         print("Product Found")
         print("-" * SEPARATOR_WIDTH)
-        print(f"ID: {product['id']}")
-        print(f"Name: {product['name']}")
-        print(f"Price: ${product['price']:.2f}")
-        print(f"Stock: {product['stock']}")
+        product.display_information()
+        print(product.get_fulfilment_info())
         print("-" * SEPARATOR_WIDTH)
 
 #Create the MainProgram Class - Main menu & startup
@@ -237,7 +305,7 @@ class MainProgram:
             elif choice == "2":
                 self.inventory.add_product()
             elif choice == "3":
-                Product.update_stock(self.inventory, self.transactions)
+                self.inventory.update_stock()
             elif choice == "4":
                 self.inventory.search_product()
             elif choice == "5":
