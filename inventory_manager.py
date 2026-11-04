@@ -36,7 +36,7 @@ def read_number(prompt, cast, minimum=0):
             print("Invalid input. Please enter a number.")
 
 
-#2.8.1 Create the FileHandling Class - Load & Save Inventory .json file
+#Create the FileHandling Class - Load & Save Inventory .json file
 class FileHandling:
     def __init__(self, filename=FILENAME):
         self.__filename = filename
@@ -66,12 +66,12 @@ class FileHandling:
             print(f"Could not save to {self.__filename}: {e}")
 
 
-#2.3 Create the Product Class - Handle Single Product Only
+#Product Class - Handle Single Product Only
 class Product:
     def __init__(self, product_id, name, price, stock): # Each product is a dictionary with id, name, price, and stock
         self.__product_id, self.__name, self.__price, self.__stock = product_id, name, price, stock
 
-    #2.3.1 Update Stock [3]
+    #Update Stock [3]
     def update_stock(products, transactions):
         print("\nUpdate Stock")
         product = find_product(products, input("Enter Product ID: ").strip())
@@ -87,6 +87,7 @@ class Product:
         record_transaction(transactions, product["id"], change, "update")
         print("Stock updated successfully!")
 
+#1.2 Create a PhysicalProduct class
 class PhysicalProduct (Product):
     def __init__(self, product_id, name, price, stock, weight):
         super().__init__(product_id, name, price, stock)  # Reuse Product constructor
@@ -97,7 +98,19 @@ class PhysicalProduct (Product):
               f"Price: ${self.__price:.2f} | Stock: {self.__stock} | "
               f"Weight: {self.weight} kg")
 
-#2.6 Create the Inventory Class - Amendable: Add Product + Update Stock
+#1.3 Create a DigitalProduct class
+class DigitalProduct(Product):
+    def __init__(self, product_id, name, price, stock, download_size):
+        super().__init__(product_id, name, price, stock)
+        self.download_size = download_size
+
+    def display_information(self):
+        print(f"ID: {self.__product_id} | Name: {self.__name} | "
+              f"Price: ${self.__price:.2f} | Stock: {self.__stock} | "
+              f"Download Size: {self.download_size} MB")
+
+
+#Inventory Class - Amendable: Add Product + Update Stock
 class Inventory:
     def __init__(self, products, transactions):
         self.__products = products if products is not None else [] #return empty if no products
@@ -111,7 +124,7 @@ class Inventory:
     def append(self, product):
         self.__products.append(product)
 
-    #2.6.1 Display all Products [1]
+    #Display all Products [1]
     def display_all(self):
         print("\nCurrent Inventory")
         print("-" * SEPARATOR_WIDTH) 
@@ -123,7 +136,7 @@ class Inventory:
                   f"Price: ${p['price']:.2f} | Stock: {p['stock']}")
         print("-" * SEPARATOR_WIDTH) 
 
-    #2.6.2 Add Product [2] <Need to add on to whole existing list>
+    #Add Product [2] <Need to add on to whole existing list>
     def add_product(self):
         print("\nAdd New Product")
         product_id = input("Product ID: ").strip() #remove white spaces from input
@@ -141,7 +154,7 @@ class Inventory:
         record_transaction(self.__transactions, product_id, stock, "add")
         print("Product added successfully!")
 
-  ##2.6.3 Search for a Product [4] <Find Within whole list>
+  #Search for a Product [4] <Find Within whole list>
     def search_product(self):
         print("\nSearch Product")
         product = find_product(self, input("Enter Product ID: ").strip())
@@ -156,14 +169,14 @@ class Inventory:
         print(f"Stock: {product['stock']}")
         print("-" * SEPARATOR_WIDTH)
 
-#2.8.2 Create the MainProgram Class - Main menu & startup
+#Create the MainProgram Class - Main menu & startup
 class MainProgram:
     def __init__(self):
         self.file_handler = FileHandling()
         products, self.transactions = self.file_handler.load_inventory()
         self.inventory = Inventory(products, self.transactions)
 
-    #2.8.2.1 Menu System - Create menu options for Display, Add, Update, Search, Save and Exit.
+    #Menu System - Create menu options for Display, Add, Update, Search, Save and Exit.
     def show_menu(self):
         print("\n----------- MENU -----------")
         print("1. Display All Products")
@@ -174,11 +187,11 @@ class MainProgram:
         print("6. Exit")
         print("-----------------------------")
 
-    #2.8.2.2 Common Function within = Save Inventory
+    #Common Function within = Save Inventory
     def save(self):
         self.file_handler.save_inventory(self.inventory, self.transactions)
 
-    #2.8.2.3 Main startup screen [Screen Input for 1-6]
+    #Main startup screen [Screen Input for 1-6]
     def main(self):
         print("=" * SEPARATOR_WIDTH)
         print("INVENTORY MANAGEMENT SYSTEM")
