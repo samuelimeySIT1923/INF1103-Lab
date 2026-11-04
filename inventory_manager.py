@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from abc import ABC, abstractmethod
  
 FILENAME = "inventory.json"
 SEPARATOR_WIDTH = 48 #X dashes printed for formatting
@@ -67,10 +68,17 @@ class FileHandling:
 
 
 #Product Class - Handle Single Product Only
-class Product:
-    def __init__(self, product_id, name, price, stock): # Each product is a dictionary with id, name, price, and stock
-        self.__product_id, self.__name, self.__price, self.__stock = product_id, name, price, stock
+class Product(ABC):
+    def __init__(self, product_id, name, price, stock):
+        self.__product_id = product_id
+        self.__name = name
+        self.__price = price
+        self.__stock = stock
 
+    #3.1 Convert Product into an abstract class
+    @abstractmethod
+    def get_fulfilment_info(self):
+        pass
     #Update Stock [3]
     def update_stock(products, transactions):
         print("\nUpdate Stock")
@@ -98,6 +106,11 @@ class PhysicalProduct (Product):
               f"Price: ${self.__price:.2f} | Stock: {self.__stock} | "
               f"Weight: {self.weight} kg")
 
+#3.2.1 Implement the required method [PhysicalProduct]
+    def get_fulfilment_info(self):
+        return f"Product {self.__name} will be require physical shipping."
+
+
 #1.3 Create a DigitalProduct class
 class DigitalProduct(Product):
     def __init__(self, product_id, name, price, stock, download_size):
@@ -108,6 +121,10 @@ class DigitalProduct(Product):
         print(f"ID: {self.__product_id} | Name: {self.__name} | "
               f"Price: ${self.__price:.2f} | Stock: {self.__stock} | "
               f"Download Size: {self.download_size} MB")
+
+#3.2.2 Implement the required method [DigitalProduct]
+    def get_fulfilment_info(self):
+        return f"Product {self.__name} will be delivered to you digitally."
 
 
 #Inventory Class - Amendable: Add Product + Update Stock
