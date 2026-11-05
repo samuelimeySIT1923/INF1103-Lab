@@ -10,7 +10,7 @@ SEPARATOR_WIDTH = 48 #X dashes printed for formatting
 #Common function 1 - Used to check for matching products ID in Add Product, Update Stock and Search Product
 def find_product(products, product_id):
     for product in products: # Return the matching product dictionary, or None if there is no match.
-        if product["id"] == product_id:
+        if product.id == product_id:
             return product
     return None # only after the whole list has been checked
 
@@ -252,8 +252,8 @@ class Inventory:
         print(f"Current Stock: {product.stock}")
         new_stock = read_number("New Stock Quantity: ", int)
         change = new_stock - product.stock
-        product["stock"] = new_stock
-        record_transaction(self.__transactions, product["id"], change, "update")
+        product.stock = new_stock
+        record_transaction(self.__transactions, product.id, change, "update")
         print("Stock updated successfully!")
 
   #Search for a Product [4] <Find Within whole list>
