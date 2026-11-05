@@ -45,6 +45,9 @@ def create_product(data):
     if kind == "digital":
         return DigitalProduct(data["id"], data["name"], data["price"],
                               data["stock"], data["download_size"])
+    if kind == "subscription":
+        return SubscriptionProduct(data["id"], data["name"], data["price"],
+                                   data["stock"], data["months_left"])
     raise ValueError(f"Unknown product type: {kind}")
 
 
@@ -187,6 +190,41 @@ class DigitalProduct(Product):
     def get_fulfilment_info(self):
         return f"Product {self.name} will be delivered to you digitally. Download size: {self.download_size} MB"
 
+#8 Create a SubscriptionProduct class
+class SubscriptionProduct(Product):
+    def __init__(self, product_id, name, price, stock, months_left):
+        super().__init__(product_id, name, price, stock)
+        if months_left < 0:  # Validate months left in subscription
+            raise ValueError("Month(s) left should not be negative. Else, product has expired.")
+        self.__validity_period = months_left
+
+    @property
+    def validity_period(self):
+        return self.__validity_period
+
+    def get_details(self):
+        return f"{super().get_details()} | Type: Subscription | Month(s) Left: {self.validity_period}"
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "subscription"
+        data["months_left"] = self.validity_period
+        return data
+
+    def get_fulfilment_info(self):
+        return f"Product {self.name} is a subscription. {self.validity_period} month(s) left before expiry."
+
+#Reflection:
+# It was easy to add the new product type in based on the layout of the previous items. However, modifications are required for it
+# to be selectable as a product type and display accordingly.
+
+# To modify, there is a need to add "3. Subscription Product" and update "create_product" to accept the new product type. 
+# This can be combersome if there is a need to modify multiple areas of the code for each new product type.
+
+# 1 proposition for the design to be enhanced will be to create a list of available product types where each product type is a dictionary
+# containing the name and the class reference. This will allow for the menu to be generated dynamically and "create_product" can 
+# automatically update itself to dynamically handle the creation of each type.
+
 
 #Inventory Class - Amendable: Add Product + Update Stock
 class Inventory:
@@ -226,9 +264,9 @@ class Inventory:
         name = input("Product Name: ").strip() #remove white spaces from input
         price = read_number("Price: ", float) #price in float, accept decimal (Cents)
         stock = read_number("Stock Quantity: ", int) #stock in int, whole number only
-        print (f"Select Product Type:\n1. Physical Product\n2. Digital Product")
+        print (f"Select Product Type:\n1. Physical Product\n2. Digital Product\n3. Subscription Product")
         while True:
-            product_type = input("Choose Product Type (1 or 2): ").strip()
+            product_type = input("Choose Product Type (1, 2 or 3): ").strip()
             if product_type == "1":
                 weight = read_number("Weight (kg): ", float)
                 product = PhysicalProduct(product_id, name, price, stock, weight)
@@ -237,8 +275,12 @@ class Inventory:
                 download_size = read_number("Download Size (MB): ", float)
                 product = DigitalProduct(product_id, name, price, stock, download_size)
                 break
+            elif product_type == "3":
+                months_left = read_number("Months Left: ", int)
+                product = SubscriptionProduct(product_id, name, price, stock, months_left)
+                break
             else:
-                print("Invalid option. Please choose 1 or 2.")
+                print("Invalid option. Please choose 1, 2 or 3.")
         self.__products.append(product)
         record_transaction(self.__transactions, product_id, stock, "add")
         print("Product added successfully!")
