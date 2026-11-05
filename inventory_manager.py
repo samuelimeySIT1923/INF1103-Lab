@@ -108,6 +108,11 @@ class Product(ABC):
     def stock(self):
         return self.__stock
 
+    #3.1 Convert Product into an abstract class
+    @abstractmethod
+    def get_fulfilment_info(self):
+        pass
+
     def get_details(self): #Regular Method - Children can extend from this method
         return (f"ID: {self.__product_id} | Name: {self.__name} | "
                 f"Price: ${self.__price:.2f} | Stock: {self.__stock}")
@@ -118,11 +123,6 @@ class Product(ABC):
     def to_dict(self):
         return {"id": self.__product_id, "name": self.__name,
                 "price": self.__price, "stock": self.__stock}
-
-    #3.1 Convert Product into an abstract class
-    @abstractmethod
-    def get_fulfilment_info(self):
-        pass
 
 
 #1.2 Create a PhysicalProduct class (Parent, interface)
