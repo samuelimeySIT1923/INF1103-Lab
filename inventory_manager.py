@@ -10,7 +10,7 @@ SEPARATOR_WIDTH = 48 #X dashes printed for formatting
 #Common function 1 - Used to check for matching products ID in Add Product, Update Stock and Search Product
 def find_product(products, product_id):
     for product in products: # Return the matching product dictionary, or None if there is no match.
-        if product.id == product_id:
+        if product.product_id == product_id:
             return product
     return None # only after the whole list has been checked
 
@@ -104,9 +104,12 @@ class Product(ABC):
     @property
     def price(self):
         return self.__price
-    @property
+    @property #get current stock value
     def stock(self):
         return self.__stock
+    @stock.setter
+    def stock(self, value):
+        self.__stock = value
 
     #3.1 Convert Product into an abstract class
     @abstractmethod
