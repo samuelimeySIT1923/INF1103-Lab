@@ -155,7 +155,7 @@ class PhysicalProduct (Product, CanBeShipped):
 
 #3.2.1 Implement the required method [PhysicalProduct]
     def get_fulfilment_info(self):
-        return f"Product {self.__name} will be require physical shipping. \nEstimated shipping cost: ${self.calculate_shipping_cost(self.weight):.2f}"
+        return f"Product {self.name} will be require physical shipping. \nEstimated shipping cost: ${self.calculate_shipping_cost(self.weight):.2f}"
     
     def calculate_shipping_cost(self, weight):
         return self.BASE_SHIPPING_COST + (self.COST_PER_KG * weight)
@@ -185,7 +185,7 @@ class DigitalProduct(Product):
 
 #3.2.2 Implement the required method [DigitalProduct]
     def get_fulfilment_info(self):
-        return f"Product {self.__name} will be delivered to you digitally. Download size: {self.download_size} MB"
+        return f"Product {self.name} will be delivered to you digitally. Download size: {self.download_size} MB"
 
 
 #Inventory Class - Amendable: Add Product + Update Stock
@@ -256,7 +256,7 @@ class Inventory:
         new_stock = read_number("New Stock Quantity: ", int)
         change = new_stock - product.stock
         product.stock = new_stock
-        record_transaction(self.__transactions, product.id, change, "update")
+        record_transaction(self.__transactions, product.product_id, change, "update")
         print("Stock updated successfully!")
 
   #Search for a Product [4] <Find Within whole list>
