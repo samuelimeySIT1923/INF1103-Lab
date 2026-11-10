@@ -40,13 +40,13 @@ def read_number(prompt, cast, minimum=0):
 def create_product(data):
     kind = data.get("type", "physical")
     if kind == "physical":
-        return PhysicalProduct(data["id"], data["name"], data["price"],
+        return PhysicalProduct(data["id"], data["product_name"], data["price"],
                                data["stock"], data.get("weight", 0.0))
     if kind == "digital":
-        return DigitalProduct(data["id"], data["name"], data["price"],
+        return DigitalProduct(data["id"], data["product_name"], data["price"],
                               data["stock"], data["download_size"])
     if kind == "subscription":
-        return SubscriptionProduct(data["id"], data["name"], data["price"],
+        return SubscriptionProduct(data["id"], data["product_name"], data["price"],
                                    data["stock"], data["months_left"])
     raise ValueError(f"Unknown product type: {kind}")
 
@@ -54,9 +54,9 @@ def create_product(data):
 def read_supplier():
     print("Supplier Details")
     supplier_id = read_text("Supplier ID: ")
-    name = read_text("Supplier Name: ")
+    supplier_name = read_text("Supplier Name: ")
     contact_email = read_text("Supplier Contact Email: ")
-    return Supplier(supplier_id, name, contact_email)
+    return Supplier(supplier_id, supplier_name, contact_email)
 
 #Common Function 6 - Keep asking until the user enters something that is not blank
 def read_text(prompt):
@@ -105,21 +105,41 @@ class CanBeShipped(ABC):
 
 #2.1 Supplier Class
 class Supplier:
-    def __init__(self, supplier_id: str, name: str, contact_email: str):
+    def __init__(self, supplier_id: str, supplier_name: str, contact_email: str):
         self.__supplier_id = supplier_id
-        self.__name = name
+        self.__supplier_name = supplier_name
         self.__contact_email = contact_email
 
+    #Read-only access as private data to read supplier information
+    @property
+    def supplier_id(self):
+        return self.__supplier_id
+    @property
+    def supplier_name(self):
+        return self.__supplier_name
+    @property
+    def contact_email(self):
+        return self.__contact_email
+
     def display_information(self):
-        print(f"Supplier ID: {self.__supplier_id} | Name: {self.__name} | Contact Email: {self.__contact_email}")
+        print(f"Supplier ID: {self.__supplier_id} | Supplier Name: {self.__supplier_name} | Contact Email: {self.__contact_email}")
+
+    def to_dict(self) -> dict:
+        return {"supplier_id": self.__supplier_id, "supplier_name": self.__supplier_name,
+                "contact_email": self.__contact_email}
+ 
+    #Python dictionary back to Supplier object - used when loading Inventory.json
+    @classmethod
+    def from_dict(cls, data: dict) -> "Supplier":
+        return cls(data["supplier_id"], data["supplier_name"], data["contact_email"])
 
 #2.2 Associate Supplier with Product
 #Product Class - Handle Single Product Only
 class Product(ABC):
-    def __init__(self, product_id: str, name: str, price: float, stock_quantity: int, supplier: Supplier):
+    def __init__(self, product_id: str, product_name: str, price: float, stock_quantity: int, supplier: Supplier):
         self.__supplier: Supplier = supplier
         self.__product_id = product_id
-        self.__name = name
+        self.__product_name = product_name
         self.__price = price
         self.__stock_quantity = stock_quantity
 
@@ -128,8 +148,8 @@ class Product(ABC):
     def product_id(self):
         return self.__product_id
     @property
-    def name(self):
-        return self.__name
+    def product_name(self):
+        return self.__product_name
     @property
     def price(self):
         return self.__price
@@ -146,14 +166,14 @@ class Product(ABC):
         pass
 
     def get_details(self): #Regular Method - Children can extend from this method
-        return (f"ID: {self.__product_id} | Name: {self.__name} | "
-                f"Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}| Supplier: {self.__supplier.name}")
+        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} | "
+                f"Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}| Supplier: {self.__supplier.supplier_name}")
 
     def display_information(self):
         print(self.get_details())
 
     def to_dict(self):
-        return {"id": self.__product_id, "name": self.__name,
+        return {"id": self.__product_id, "name": self.__product_name,
                 "price": self.__price, "stock":self.__stock_quantity}
 
 
@@ -162,8 +182,8 @@ class PhysicalProduct (Product, CanBeShipped):
     BASE_SHIPPING_COST = 5.00  # Base shipping cost in dollars
     COST_PER_KG = 2.00  # Cost per kilogram in dollars
 
-    def __init__(self, product_id: str, name: str, price: float, stock_quantity: int, weight: float, supplier: Supplier):
-        super().__init__(product_id, name, price, stock_quantity, supplier)  # Reuse Product constructor
+    def __init__(self, product_id: str, product_name: str, price: float, stock_quantity: int, weight: float, supplier: Supplier):
+        super().__init__(product_id, product_name, price, stock_quantity, supplier)  # Reuse Product constructor
         if weight < 0:  # Validate weight
             raise ValueError("Weight cannot be negative.")
         self.__weight = weight  # Initialize weight attribute
@@ -184,7 +204,7 @@ class PhysicalProduct (Product, CanBeShipped):
 
 #Implement the required method [PhysicalProduct]
     def get_fulfilment_info(self):
-        return f"Product {self.name} will be require physical shipping. \nEstimated shipping cost: ${self.calculate_shipping_cost(self.weight):.2f}"
+        return f"Product {self.product_name} will be require physical shipping. \nEstimated shipping cost: ${self.calculate_shipping_cost(self.weight):.2f}"
     
     def calculate_shipping_cost(self, weight):
         return self.BASE_SHIPPING_COST + (self.COST_PER_KG * weight)
@@ -192,8 +212,8 @@ class PhysicalProduct (Product, CanBeShipped):
 
 #Create a DigitalProduct class
 class DigitalProduct(Product):
-    def __init__(self, product_id: str, name: str, price: float, stock_quantity: int, download_size: float, supplier: Supplier):
-        super().__init__(product_id, name, price, stock_quantity, supplier)
+    def __init__(self, product_id: str, product_name: str, price: float, stock_quantity: int, download_size: float, supplier: Supplier):
+        super().__init__(product_id, product_name, price, stock_quantity, supplier)
         if download_size < 0:  # Validate download size
             raise ValueError("Download size cannot be negative.")
         self.__download_size = download_size
@@ -214,12 +234,12 @@ class DigitalProduct(Product):
 
 #Implement the required method [DigitalProduct]
     def get_fulfilment_info(self):
-        return f"Product {self.name} will be delivered to you digitally. Download size: {self.download_size} MB"
+        return f"Product {self.product_name} will be delivered to you digitally. Download size: {self.download_size} MB"
 
 #Create a SubscriptionProduct class
 class SubscriptionProduct(Product):
-    def __init__(self, product_id: str, name: str, price: float, stock_quantity: int, months_left: int):
-        super().__init__(product_id, name, price, stock_quantity)
+    def __init__(self, product_id: str, product_name: str, price: float, stock_quantity: int, months_left: int):
+        super().__init__(product_id, product_name, price, stock_quantity)
         if months_left < 0:  # Validate months left in subscription
             raise ValueError("Month(s) left should not be negative. Else, product has expired.")
         self.__validity_period = months_left
@@ -238,7 +258,7 @@ class SubscriptionProduct(Product):
         return data
 
     def get_fulfilment_info(self):
-        return f"Product {self.name} is a subscription. {self.validity_period} month(s) left before expiry."
+        return f"Product {self.product_name} is a subscription. {self.validity_period} month(s) left before expiry."
 
 #Reflection:
 # It was easy to add the new product type in based on the layout of the previous items. However, modifications are required for it
@@ -287,7 +307,7 @@ class Inventory:
         if find_product(self, product_id): #ERROR handling: no same id
             print("Product ID already exists.")
             return
-        name = input("Product Name: ").strip() #remove white spaces from input
+        product_name = input("Product Name: ").strip() #remove white spaces from input
         price = read_number("Price: ", float) #price in float, accept decimal (Cents)
         stock_quantity = read_number("Stock Quantity: ", int) #stock in int, whole number only
         supplier = read_supplier() #independent object, read supplier details
@@ -296,15 +316,15 @@ class Inventory:
             product_type = input("Choose Product Type (1, 2 or 3): ").strip()
             if product_type == "1":
                 weight = read_number("Weight (kg): ", float)
-                product = PhysicalProduct(product_id, name, price, stock_quantity, weight)
+                product = PhysicalProduct(product_id, product_name, price, stock_quantity, weight)
                 break
             elif product_type == "2":
                 download_size = read_number("Download Size (MB): ", float)
-                product = DigitalProduct(product_id, name, price, stock_quantity, download_size)
+                product = DigitalProduct(product_id, product_name, price, stock_quantity, download_size)
                 break
             elif product_type == "3":
                 months_left = read_number("Months Left: ", int)
-                product = SubscriptionProduct(product_id, name, price, stock_quantity, months_left)
+                product = SubscriptionProduct(product_id, product_name, price, stock_quantity, months_left)
                 break
             else:
                 print("Invalid option. Please choose 1, 2 or 3.")
@@ -320,7 +340,7 @@ class Inventory:
             print("Product not found.")
             return
         print("Product Found:")
-        print(f"Name: {product.name}")
+        print(f"Name: {product.product_name}")
         print(f"Current Stock: {product.stock_quantity}")
         new_stock = read_number("New Stock Quantity: ", int)
         change = new_stock - product.stock_quantity
