@@ -401,7 +401,7 @@ class MainProgram:
                 self.save()
                 print("Thank you for using Inventory Management System.")
                 print("Program terminated.")
-                break
+                break         
             else:
                 #ERROR handling: invalid input beyond 1-6
                 print("Invalid option. Please choose 1-6.")
