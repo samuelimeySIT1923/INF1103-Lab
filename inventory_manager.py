@@ -111,9 +111,6 @@ class Supplier:
     def contact_email(self):
         return self.__contact_email
 
-    def display_information(self):
-        print(f"Supplier ID: {self.__supplier_id} | Supplier Name: {self.__supplier_name} | Contact Email: {self.__contact_email}")
-
     def to_dict(self) -> dict:
         return {"supplier_id": self.__supplier_id, "supplier_name": self.__supplier_name,
                 "contact_email": self.__contact_email}
@@ -156,7 +153,7 @@ class Product(ABC):
         pass
 
     def get_details(self): #Regular Method - Children can extend from this method
-        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} | Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}| Supplier: {self.__supplier.supplier_name}")
+        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} | Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}| Supplier ID: {self.__supplier.supplier_id} | Supplier Name: {self.__supplier.supplier_name} |  Supplier Contact Email: {self.__supplier.contact_email}")
 
     def display_information(self):
         print(self.get_details())
