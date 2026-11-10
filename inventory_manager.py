@@ -39,32 +39,22 @@ def read_number(prompt, cast, minimum=0):
 #Common Function 4 - Build the correct Product object from a saved dictionary (used when loading inventory.json)
 def create_product(data):
     kind = data.get("type", "physical")
+    supplier_data = data.get("supplier", {})
+    if supplier_data:
+        supplier = Supplier.from_dict(supplier_data)
+    else:
+        supplier = Supplier("N/A", "Unknown Supplier", "N/A")
+
     if kind == "physical":
         return PhysicalProduct(data["id"], data["product_name"], data["price"],
-                               data["stock"], data.get("weight", 0.0))
+                               data["stock"], data.get("weight", 0.0), supplier)
     if kind == "digital":
         return DigitalProduct(data["id"], data["product_name"], data["price"],
-                              data["stock"], data["download_size"])
+                              data["stock"], data["download_size"], supplier)
     if kind == "subscription":
         return SubscriptionProduct(data["id"], data["product_name"], data["price"],
-                                   data["stock"], data["months_left"])
+                                   data["stock"], data["months_left"], supplier)
     raise ValueError(f"Unknown product type: {kind}")
-
-#Common Function 5 - Ask the user for supplier details and build a Supplier object
-def read_supplier():
-    print("Supplier Details")
-    supplier_id = read_text("Supplier ID: ")
-    supplier_name = read_text("Supplier Name: ")
-    contact_email = read_text("Supplier Contact Email: ")
-    return Supplier(supplier_id, supplier_name, contact_email)
-
-#Common Function 6 - Keep asking until the user enters something that is not blank
-def read_text(prompt):
-    while True:
-        value = input(prompt).strip()
-        if value:
-            return value
-        print("This field cannot be empty.")
 
 #Create the FileHandling Class - Load & Save Inventory .json file
 class FileHandling:
@@ -166,15 +156,14 @@ class Product(ABC):
         pass
 
     def get_details(self): #Regular Method - Children can extend from this method
-        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} | "
-                f"Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}| Supplier: {self.__supplier.supplier_name}")
+        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} | Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}| Supplier: {self.__supplier.supplier_name}")
 
     def display_information(self):
         print(self.get_details())
 
     def to_dict(self):
         return {"id": self.__product_id, "name": self.__product_name,
-                "price": self.__price, "stock":self.__stock_quantity}
+                "price": self.__price, "stock":self.__stock_quantity, "supplier": self.__supplier.to_dict()}
 
 
 #Create a PhysicalProduct class (Parent, interface)
@@ -310,21 +299,25 @@ class Inventory:
         product_name = input("Product Name: ").strip() #remove white spaces from input
         price = read_number("Price: ", float) #price in float, accept decimal (Cents)
         stock_quantity = read_number("Stock Quantity: ", int) #stock in int, whole number only
-        supplier = read_supplier() #independent object, read supplier details
+        supplier = Supplier(
+            input("Supplier ID: ").strip(),
+            input("Supplier Name: ").strip(),
+            input("Supplier Contact Email: ").strip()
+        )
         print (f"Select Product Type:\n1. Physical Product\n2. Digital Product\n3. Subscription Product")
         while True:
             product_type = input("Choose Product Type (1, 2 or 3): ").strip()
             if product_type == "1":
                 weight = read_number("Weight (kg): ", float)
-                product = PhysicalProduct(product_id, product_name, price, stock_quantity, weight)
+                product = PhysicalProduct(product_id, product_name, price, stock_quantity, weight, supplier)
                 break
             elif product_type == "2":
                 download_size = read_number("Download Size (MB): ", float)
-                product = DigitalProduct(product_id, product_name, price, stock_quantity, download_size)
+                product = DigitalProduct(product_id, product_name, price, stock_quantity, download_size, supplier)
                 break
             elif product_type == "3":
                 months_left = read_number("Months Left: ", int)
-                product = SubscriptionProduct(product_id, product_name, price, stock_quantity, months_left)
+                product = SubscriptionProduct(product_id, product_name, price, stock_quantity, months_left, supplier)
                 break
             else:
                 print("Invalid option. Please choose 1, 2 or 3.")
