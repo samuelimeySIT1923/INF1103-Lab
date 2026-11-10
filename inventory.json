@@ -15,6 +15,38 @@
             "stock": 50,
             "type": "digital",
             "download_size": 1000.0
+        },
+        {
+            "id": "0003",
+            "name": "Bottle",
+            "price": 1.0,
+            "stock": 500,
+            "type": "physical",
+            "weight": 0.1
+        },
+        {
+            "id": "0004",
+            "name": "Killcode",
+            "price": 1000.0,
+            "stock": 2,
+            "type": "digital",
+            "download_size": 7182.0
+        },
+        {
+            "id": "005",
+            "name": "Netflix Premium",
+            "price": 9.99,
+            "stock": 1,
+            "type": "subscription",
+            "months_left": 12
+        },
+        {
+            "id": "0006",
+            "name": "Spotify",
+            "price": 3.99,
+            "stock": 1,
+            "type": "subscription",
+            "months_left": 5
         }
     ],
     "transactions": [
@@ -41,6 +73,36 @@
             "product_id": "0002",
             "type": "update",
             "change": 40
+        },
+        {
+            "time": "2026-11-05 17:16:32",
+            "product_id": "0003",
+            "type": "add",
+            "change": 500
+        },
+        {
+            "time": "2026-11-05 17:17:17",
+            "product_id": "0004",
+            "type": "add",
+            "change": 1
+        },
+        {
+            "time": "2026-11-05 17:17:35",
+            "product_id": "005",
+            "type": "add",
+            "change": 1
+        },
+        {
+            "time": "2026-11-05 17:17:46",
+            "product_id": "0004",
+            "type": "update",
+            "change": 1
+        },
+        {
+            "time": "2026-11-05 09:28:05",
+            "product_id": "0006",
+            "type": "add",
+            "change": 1
         }
     ]
 }

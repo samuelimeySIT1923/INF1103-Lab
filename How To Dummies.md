@@ -7,6 +7,11 @@ git commit -m "{Insert Commit Name}"
 git log [View History]
 git push [Send to GitHub]
 
+Docker:
+[version] docker --version
+[running?] docker ps
+
+
 Once Fully done:
 docker run --rm -it -v "${PWD}:/usr/src/app" -w /usr/src/app python:3.11-slim python {FileName}.py
 
