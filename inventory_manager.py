@@ -50,6 +50,21 @@ def create_product(data):
                                    data["stock"], data["months_left"])
     raise ValueError(f"Unknown product type: {kind}")
 
+#Common Function 5 - Ask the user for supplier details and build a Supplier object
+def read_supplier():
+    print("Supplier Details")
+    supplier_id = read_text("Supplier ID: ")
+    name = read_text("Supplier Name: ")
+    contact_email = read_text("Supplier Contact Email: ")
+    return Supplier(supplier_id, name, contact_email)
+
+#Common Function 6 - Keep asking until the user enters something that is not blank
+def read_text(prompt):
+    while True:
+        value = input(prompt).strip()
+        if value:
+            return value
+        print("This field cannot be empty.")
 
 #Create the FileHandling Class - Load & Save Inventory .json file
 class FileHandling:
@@ -82,20 +97,31 @@ class FileHandling:
             print(f"Could not save to {self.__filename}: {e}")
 
 
-#4.1 CanBeShipped Interface <Functional Class>
+#CanBeShipped Interface <Functional Class>
 class CanBeShipped(ABC):
     @abstractmethod
     def calculate_shipping_cost(self, weight):
         pass
 
+#2.1 Supplier Class
+class Supplier:
+    def __init__(self, supplier_id: str, name: str, contact_email: str):
+        self.__supplier_id = supplier_id
+        self.__name = name
+        self.__contact_email = contact_email
 
+    def display_information(self):
+        print(f"Supplier ID: {self.__supplier_id} | Name: {self.__name} | Contact Email: {self.__contact_email}")
+
+#2.2 Associate Supplier with Product
 #Product Class - Handle Single Product Only
 class Product(ABC):
-    def __init__(self, product_id, name, price, stock):
+    def __init__(self, product_id: str, name: str, price: float, stock_quantity: int, supplier: Supplier):
+        self.__supplier: Supplier = supplier
         self.__product_id = product_id
         self.__name = name
         self.__price = price
-        self.__stock = stock
+        self.__stock_quantity = stock_quantity
 
     #Read-only access so child classes (and Inventory) can use the private data
     @property
@@ -109,35 +135,35 @@ class Product(ABC):
         return self.__price
     @property #get current stock value
     def stock(self):
-        return self.__stock
+        return self.__stock_quantity
     @stock.setter
     def stock(self, value):
-        self.__stock = value
+        self.__stock_quantity = value
 
-    #3.1 Convert Product into an abstract class
+    #Convert Product into an abstract class
     @abstractmethod
     def get_fulfilment_info(self):
         pass
 
     def get_details(self): #Regular Method - Children can extend from this method
         return (f"ID: {self.__product_id} | Name: {self.__name} | "
-                f"Price: ${self.__price:.2f} | Stock: {self.__stock}")
+                f"Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}| Supplier: {self.__supplier.name}")
 
     def display_information(self):
         print(self.get_details())
 
     def to_dict(self):
         return {"id": self.__product_id, "name": self.__name,
-                "price": self.__price, "stock": self.__stock}
+                "price": self.__price, "stock":self.__stock_quantity}
 
 
-#1.2 Create a PhysicalProduct class (Parent, interface)
+#Create a PhysicalProduct class (Parent, interface)
 class PhysicalProduct (Product, CanBeShipped):
     BASE_SHIPPING_COST = 5.00  # Base shipping cost in dollars
     COST_PER_KG = 2.00  # Cost per kilogram in dollars
 
-    def __init__(self, product_id, name, price, stock, weight):
-        super().__init__(product_id, name, price, stock)  # Reuse Product constructor
+    def __init__(self, product_id: str, name: str, price: float, stock_quantity: int, weight: float, supplier: Supplier):
+        super().__init__(product_id, name, price, stock_quantity, supplier)  # Reuse Product constructor
         if weight < 0:  # Validate weight
             raise ValueError("Weight cannot be negative.")
         self.__weight = weight  # Initialize weight attribute
@@ -156,7 +182,7 @@ class PhysicalProduct (Product, CanBeShipped):
         data["weight"] = self.weight
         return data
 
-#3.2.1 Implement the required method [PhysicalProduct]
+#Implement the required method [PhysicalProduct]
     def get_fulfilment_info(self):
         return f"Product {self.name} will be require physical shipping. \nEstimated shipping cost: ${self.calculate_shipping_cost(self.weight):.2f}"
     
@@ -164,10 +190,10 @@ class PhysicalProduct (Product, CanBeShipped):
         return self.BASE_SHIPPING_COST + (self.COST_PER_KG * weight)
 
 
-#1.3 Create a DigitalProduct class
+#Create a DigitalProduct class
 class DigitalProduct(Product):
-    def __init__(self, product_id, name, price, stock, download_size):
-        super().__init__(product_id, name, price, stock)
+    def __init__(self, product_id: str, name: str, price: float, stock_quantity: int, download_size: float, supplier: Supplier):
+        super().__init__(product_id, name, price, stock_quantity, supplier)
         if download_size < 0:  # Validate download size
             raise ValueError("Download size cannot be negative.")
         self.__download_size = download_size
@@ -186,14 +212,14 @@ class DigitalProduct(Product):
         data["download_size"] = self.download_size
         return data
 
-#3.2.2 Implement the required method [DigitalProduct]
+#Implement the required method [DigitalProduct]
     def get_fulfilment_info(self):
         return f"Product {self.name} will be delivered to you digitally. Download size: {self.download_size} MB"
 
-#8 Create a SubscriptionProduct class
+#Create a SubscriptionProduct class
 class SubscriptionProduct(Product):
-    def __init__(self, product_id, name, price, stock, months_left):
-        super().__init__(product_id, name, price, stock)
+    def __init__(self, product_id: str, name: str, price: float, stock_quantity: int, months_left: int):
+        super().__init__(product_id, name, price, stock_quantity)
         if months_left < 0:  # Validate months left in subscription
             raise ValueError("Month(s) left should not be negative. Else, product has expired.")
         self.__validity_period = months_left
@@ -263,26 +289,27 @@ class Inventory:
             return
         name = input("Product Name: ").strip() #remove white spaces from input
         price = read_number("Price: ", float) #price in float, accept decimal (Cents)
-        stock = read_number("Stock Quantity: ", int) #stock in int, whole number only
+        stock_quantity = read_number("Stock Quantity: ", int) #stock in int, whole number only
+        supplier = read_supplier() #independent object, read supplier details
         print (f"Select Product Type:\n1. Physical Product\n2. Digital Product\n3. Subscription Product")
         while True:
             product_type = input("Choose Product Type (1, 2 or 3): ").strip()
             if product_type == "1":
                 weight = read_number("Weight (kg): ", float)
-                product = PhysicalProduct(product_id, name, price, stock, weight)
+                product = PhysicalProduct(product_id, name, price, stock_quantity, weight)
                 break
             elif product_type == "2":
                 download_size = read_number("Download Size (MB): ", float)
-                product = DigitalProduct(product_id, name, price, stock, download_size)
+                product = DigitalProduct(product_id, name, price, stock_quantity, download_size)
                 break
             elif product_type == "3":
                 months_left = read_number("Months Left: ", int)
-                product = SubscriptionProduct(product_id, name, price, stock, months_left)
+                product = SubscriptionProduct(product_id, name, price, stock_quantity, months_left)
                 break
             else:
                 print("Invalid option. Please choose 1, 2 or 3.")
         self.__products.append(product)
-        record_transaction(self.__transactions, product_id, stock, "add")
+        record_transaction(self.__transactions, product_id, stock_quantity, "add")
         print("Product added successfully!")
 
     #Update Stock [3]
@@ -294,10 +321,10 @@ class Inventory:
             return
         print("Product Found:")
         print(f"Name: {product.name}")
-        print(f"Current Stock: {product.stock}")
+        print(f"Current Stock: {product.stock_quantity}")
         new_stock = read_number("New Stock Quantity: ", int)
-        change = new_stock - product.stock
-        product.stock = new_stock
+        change = new_stock - product.stock_quantity
+        product.stock_quantity = new_stock
         record_transaction(self.__transactions, product.product_id, change, "update")
         print("Stock updated successfully!")
 
