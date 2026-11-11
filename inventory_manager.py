@@ -16,7 +16,7 @@ def find_product(products: "list[Product]", product_id: str) -> "Product | None"
     return None # only after the whole list has been checked
 
 #Common Function 2 -  Append one entry to the transaction history (never overwritten).
-def record_transaction(transactions, product_id, change, kind):
+def record_transaction(transactions: "list", product_id: str, change: int, kind: str):
         transactions.append({
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "product_id": product_id,
@@ -25,7 +25,7 @@ def record_transaction(transactions, product_id, change, kind):
         })
 
 #Common Function 3 - Read number input with validation
-def read_number(prompt, cast, minimum=0):
+def read_number(prompt: str, cast: type, minimum: int = 0) -> int:
     #Keep asking until the user enters a valid number >= minimum.
     while True:
         try:
@@ -38,7 +38,7 @@ def read_number(prompt, cast, minimum=0):
             print("Invalid input. Please enter a number.")
 
 #Common Function 4 - Build the correct Product object from a saved dictionary (used when loading inventory.json)
-def create_product(data):
+def create_product(data: dict) -> Product:
     kind = data.get("type", "physical")
     supplier_data = data.get("supplier", {})
     if supplier_data:
@@ -63,8 +63,8 @@ class FileHandling:
         self.__filename = filename
 
     #Find json file and load it if it exists, otherwise start with an empty inventory.
-    def load_inventory(self):
-    #Load data from inventory.json if it exists, otherwise create new inventory.json and start empty.
+    def load_inventory(self) -> tuple["list[Product]", "list"]:
+        #Load data from inventory.json if it exists, otherwise create new inventory.json and start empty.
         if os.path.exists(self.__filename):
             try: #try to load file, will not crash if unable to
                 with open(self.__filename, "r") as f:
@@ -79,7 +79,7 @@ class FileHandling:
         return [], [] #empty inventory and transaction history Fallback
 
     #Save the products and full transaction history to inventory.json. Will override
-    def save_inventory(self, products, transactions):
+    def save_inventory(self, products: "list[Product]", transactions: "list"):
         try:
             with open(self.__filename, "w") as f:
                 json.dump({"products": [p.to_dict() for p in products], "transactions": transactions}, f, indent=4)
@@ -91,7 +91,7 @@ class FileHandling:
 #CanBeShipped Interface <Functional Class>
 class CanBeShipped(ABC):
     @abstractmethod
-    def calculate_shipping_cost(self, weight):
+    def calculate_shipping_cost(self, weight: float):
         pass
 
 #2.1 Supplier Class
@@ -266,6 +266,8 @@ class SubscriptionProduct(Product):
 class Inventory:
     def __init__(self, products: list[Product] | None = None,transactions: list[dict] | None = None) -> None:
         self.__products: list[Product] = products if products is not None else [] #return empty if no products
+        #products is in list[Product] given it is the overall parent  class of all product types. 
+        #This allows for the inventory to be able to store any type of product [ie PhysicalProduct, DigitalProduct, SubscriptionProduct].
         self.__transactions: list[dict] = transactions if transactions is not None else [] # list of transaction 
 
     #iter -  allow instances of class to be used directly inside loops & lists
