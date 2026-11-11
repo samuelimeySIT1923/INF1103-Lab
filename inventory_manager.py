@@ -1,3 +1,4 @@
+from itertools import product
 import json
 import os
 from datetime import datetime
@@ -159,7 +160,7 @@ class Product(ABC):
         print(self.get_details())
 
     def to_dict(self):
-        return {"id": self.__product_id, "name": self.__product_name,
+        return {"id": self.__product_id, "product_name": self.__product_name,
                 "price": self.__price, "stock":self.__stock_quantity, "supplier": self.__supplier.to_dict()}
 
 
@@ -224,7 +225,7 @@ class DigitalProduct(Product):
 
 #Create a SubscriptionProduct class
 class SubscriptionProduct(Product):
-    def __init__(self, product_id: str, product_name: str, price: float, stock_quantity: int, months_left: int):
+    def __init__(self, product_id: str, product_name: str, price: float, stock_quantity: int, months_left: int, supplier: Supplier):
         super().__init__(product_id, product_name, price, stock_quantity)
         if months_left < 0:  # Validate months left in subscription
             raise ValueError("Month(s) left should not be negative. Else, product has expired.")
@@ -261,8 +262,8 @@ class SubscriptionProduct(Product):
 #Inventory Class - Amendable: Add Product + Update Stock
 class Inventory:
     def __init__(self, products, transactions):
-        self.__products = products if products is not None else [] #return empty if no products
-        self.__transactions = transactions if transactions is not None else [] # list of transaction 
+        self.__products: list[Product] = products if products is not None else [] #return empty if no products
+        self.__transactions: list[dict] = transactions if transactions is not None else [] # list of transaction 
 
     #iter -  allow instances of class to be used directly inside loops & lists
     def __iter__(self):
@@ -284,8 +285,8 @@ class Inventory:
         print("-" * SEPARATOR_WIDTH) 
 
     #Add Product [2] <Need to add on to whole existing list>
-    def add_product(self):
-        print("\nAdd New Product")
+    def create_product(self):
+        print("\nCreate New Product")
         product_id = input("Product ID: ").strip() #remove white spaces from input
         if not product_id: #ERROR handling: no blank id
             print("Product ID cannot be empty.")
@@ -319,7 +320,7 @@ class Inventory:
             else:
                 print("Invalid option. Please choose 1, 2 or 3.")
         self.__products.append(product)
-        record_transaction(self.__transactions, product_id, stock_quantity, "add")
+        record_transaction(self.__transactions, product_id, stock_quantity, "add product")
         print("Product added successfully!")
 
     #Update Stock [3]
@@ -338,7 +339,31 @@ class Inventory:
         record_transaction(self.__transactions, product.product_id, change, "update")
         print("Stock updated successfully!")
 
-  #Search for a Product [4] <Find Within whole list>
+    #3.2 Add Product to inventory[4]
+    def add_product(self, product: Product) -> None:
+        print("\nAdd Product from Inventory")   
+        if product is None:
+            print("No Product to Add.")
+            return
+        if self.find_product(product.product_id) is not None:
+            raise ValueError(f"Product ID {product.product_id} already exists.")
+        self.__products.append(product)
+        record_transaction(self.__transactions, product.product_id, product.stock, "add to inv")
+        print("Product(s) added to inventory successfully!")
+
+    #3.2 Remove Product from Inventory [5]
+    def remove_product(self, product_id: str):
+        print("\nRemove Product from Inventory")
+        product_id = input("\nEnter Product ID to remove: ").strip()
+        product = self.find_product(product_id)
+        if product is None:
+            print("Product not found.")
+        self.__products.remove(product)
+        record_transaction(self.__transactions, product.product_id, -product.stock_quantity, "remove from inv")
+        print(f"Product {product.product_name} removed successfully!")
+        
+
+  #Search for a Product [6] <Find Within whole list>
     def search_product(self):
         print("\nSearch Product")
         product = find_product(self, input("Enter Product ID: ").strip())
@@ -362,11 +387,13 @@ class MainProgram:
     def show_menu(self):
         print("\n----------- MENU -----------")
         print("1. Display All Products")
-        print("2. Add Product")
+        print("2. Create Product")
         print("3. Update Stock")
-        print("4. Search Product")
-        print("5. Save Inventory")
-        print("6. Exit")
+        print("4. Add Product to Inventory")
+        print("5. Remove Product from Inventory")
+        print("6. Search Product")
+        print("7. Save Inventory")
+        print("8. Exit")
         print("-----------------------------")
 
     #Common Function within = Save Inventory
@@ -385,23 +412,28 @@ class MainProgram:
             if choice == "1":
                 self.inventory.display_all()
             elif choice == "2":
-                self.inventory.add_product()
+                self.inventory.create_product()
             elif choice == "3":
                 self.inventory.update_stock()
             elif choice == "4":
-                self.inventory.search_product()
+                product = self.create_product()  # Create a new product to add to inventory
+                self.inventory.add_product(product)
             elif choice == "5":
+                self.inventory.remove_product()
+            elif choice == "6":
+                self.inventory.search_product()
+            elif choice == "7":
                 print("Saving inventory...")
                 self.save()
-            elif choice == "6":
+            elif choice == "8":
                 print("Saving inventory before exit...")
                 self.save()
                 print("Thank you for using Inventory Management System.")
                 print("Program terminated.")
                 break         
             else:
-                #ERROR handling: invalid input beyond 1-6
-                print("Invalid option. Please choose 1-6.")
+                #ERROR handling: invalid input beyond 1-8
+                print("Invalid option. Please choose 1-8.")
 
 
   #Guard to ensure program launches directly when run as a script, not when imported as a module. External Code
