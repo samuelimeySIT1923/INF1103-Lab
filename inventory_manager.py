@@ -9,7 +9,7 @@ SEPARATOR_WIDTH = 48 #X dashes printed for formatting
 
 
 #Common function 1 - Used to check for matching products ID in Add Product, Update Stock and Search Product
-def find_product(products, product_id):
+def find_product(products: "list[Product]", product_id: str) -> "Product | None":
     for product in products: # Return the matching product dictionary, or None if there is no match.
         if product.product_id == product_id:
             return product
@@ -154,7 +154,10 @@ class Product(ABC):
         pass
 
     def get_details(self): #Regular Method - Children can extend from this method
-        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} | Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}| Supplier ID: {self.__supplier.supplier_id} | Supplier Name: {self.__supplier.supplier_name} |  Supplier Contact Email: {self.__supplier.contact_email}")
+        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} |",
+                f"Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}|",
+                f"Supplier ID: {self.__supplier.supplier_id} | Supplier Name: {self.__supplier.supplier_name} |",
+                f"Supplier Contact Email: {self.__supplier.contact_email}")
 
     def display_information(self):
         print(self.get_details())
@@ -226,7 +229,7 @@ class DigitalProduct(Product):
 #Create a SubscriptionProduct class
 class SubscriptionProduct(Product):
     def __init__(self, product_id: str, product_name: str, price: float, stock_quantity: int, months_left: int, supplier: Supplier):
-        super().__init__(product_id, product_name, price, stock_quantity)
+        super().__init__(product_id, product_name, price, stock_quantity, supplier)
         if months_left < 0:  # Validate months left in subscription
             raise ValueError("Month(s) left should not be negative. Else, product has expired.")
         self.__validity_period = months_left
@@ -261,7 +264,7 @@ class SubscriptionProduct(Product):
 
 #Inventory Class - Amendable: Add Product + Update Stock
 class Inventory:
-    def __init__(self, products, transactions):
+    def __init__(self, products: list[Product] | None = None,transactions: list[dict] | None = None) -> None:
         self.__products: list[Product] = products if products is not None else [] #return empty if no products
         self.__transactions: list[dict] = transactions if transactions is not None else [] # list of transaction 
 
@@ -269,9 +272,8 @@ class Inventory:
     def __iter__(self):
         return iter(self.__products) # Returns an iterator for the products list
 
-    #append - Allow add on to existing data
-    def append(self, product):
-        self.__products.append(product)
+    def find_product(self, product_id: str) -> Product | None:
+        return find_product(self.__products, product_id)
 
     #Display all Products [1]
     def display_all(self):
@@ -284,49 +286,10 @@ class Inventory:
             product.display_information()
         print("-" * SEPARATOR_WIDTH) 
 
-    #Add Product [2] <Need to add on to whole existing list>
-    def create_product(self):
-        print("\nCreate New Product")
-        product_id = input("Product ID: ").strip() #remove white spaces from input
-        if not product_id: #ERROR handling: no blank id
-            print("Product ID cannot be empty.")
-            return
-        if find_product(self, product_id): #ERROR handling: no same id
-            print("Product ID already exists.")
-            return
-        product_name = input("Product Name: ").strip() #remove white spaces from input
-        price = read_number("Price: ", float) #price in float, accept decimal (Cents)
-        stock_quantity = read_number("Stock Quantity: ", int) #stock in int, whole number only
-        supplier = Supplier(
-            input("Supplier ID: ").strip(),
-            input("Supplier Name: ").strip(),
-            input("Supplier Contact Email: ").strip()
-        )
-        print (f"Select Product Type:\n1. Physical Product\n2. Digital Product\n3. Subscription Product")
-        while True:
-            product_type = input("Choose Product Type (1, 2 or 3): ").strip()
-            if product_type == "1":
-                weight = read_number("Weight (kg): ", float)
-                product = PhysicalProduct(product_id, product_name, price, stock_quantity, weight, supplier)
-                break
-            elif product_type == "2":
-                download_size = read_number("Download Size (MB): ", float)
-                product = DigitalProduct(product_id, product_name, price, stock_quantity, download_size, supplier)
-                break
-            elif product_type == "3":
-                months_left = read_number("Months Left: ", int)
-                product = SubscriptionProduct(product_id, product_name, price, stock_quantity, months_left, supplier)
-                break
-            else:
-                print("Invalid option. Please choose 1, 2 or 3.")
-        self.__products.append(product)
-        record_transaction(self.__transactions, product_id, stock_quantity, "add product")
-        print("Product added successfully!")
-
     #Update Stock [3]
     def update_stock(self):
         print("\nUpdate Stock")
-        product = find_product(self, input("Enter Product ID: ").strip())
+        product = self.find_product(input("Enter Product ID: ").strip())
         if product is None:
             print("Product not found.")
             return
@@ -339,30 +302,22 @@ class Inventory:
         record_transaction(self.__transactions, product.product_id, change, "update")
         print("Stock updated successfully!")
 
-    #3.2 Add Product to inventory[4]
-    def add_product(self, product: Product) -> None:
-        print("\nAdd Product from Inventory")   
-        if product is None:
-            print("No Product to Add.")
-            return
+    #3.2 Add Existing Product to inventory [4]
+    def add_product(self, product_id: str) -> None:
         if self.find_product(product.product_id) is not None:
-            raise ValueError(f"Product ID {product.product_id} already exists.")
+            raise ValueError(f"Product ID {product.product_id} already exists in the inventory.")
         self.__products.append(product)
-        record_transaction(self.__transactions, product.product_id, product.stock, "add to inv")
-        print("Product(s) added to inventory successfully!")
+        record_transaction(self.__transactions, product.product_id, product.stock_quantity, "add to inv")
 
     #3.2 Remove Product from Inventory [5]
-    def remove_product(self, product_id: str):
-        print("\nRemove Product from Inventory")
-        product_id = input("\nEnter Product ID to remove: ").strip()
+    def remove_product(self, product_id: str) -> bool:
         product = self.find_product(product_id)
         if product is None:
-            print("Product not found.")
+            return False
         self.__products.remove(product)
         record_transaction(self.__transactions, product.product_id, -product.stock_quantity, "remove from inv")
-        print(f"Product {product.product_name} removed successfully!")
+        return True
         
-
   #Search for a Product [6] <Find Within whole list>
     def search_product(self):
         print("\nSearch Product")
@@ -396,9 +351,73 @@ class MainProgram:
         print("8. Exit")
         print("-----------------------------")
 
-    #Common Function within = Save Inventory
+    #Common Function 1: Save Inventory
     def save(self):
         self.file_handler.save_inventory(self.inventory, self.transactions)
+
+    #Common function 2: Option 2 helper - ask the user for details and BUILD a product. Returns it; does not add it to any inventory.
+    def prompt_for_product(self) -> Product | None:
+        print("\nCreate New Product")
+        product_id = input("Product ID: ").strip() #remove white spaces from input
+        if not product_id: #ERROR handling: no blank id
+            print("Product ID cannot be empty.")
+            return None
+        if self.inventory.find_product(product_id) or find_product(self.created_products, product_id): #ERROR handling: no same id
+            print("Product ID already exists.")
+            return None
+        product_name = input("Product Name: ").strip() #remove white spaces from input
+        price = read_number("Price: ", float) #price in float, accept decimal (Cents)
+        stock_quantity = read_number("Stock Quantity: ", int) #stock in int, whole number only
+        supplier = Supplier(
+            input("Supplier ID: ").strip(),
+            input("Supplier Name: ").strip(),
+            input("Supplier Contact Email: ").strip()
+        )
+        print("Select Product Type:\n1. Physical Product\n2. Digital Product\n3. Subscription Product")
+        while True:
+            product_type = input("Choose Product Type (1, 2 or 3): ").strip()
+            if product_type == "1":
+                weight = read_number("Weight (kg): ", float)
+                return PhysicalProduct(product_id, product_name, price, stock_quantity, weight, supplier)
+            elif product_type == "2":
+                download_size = read_number("Download Size (MB): ", float)
+                return DigitalProduct(product_id, product_name, price, stock_quantity, download_size, supplier)
+            elif product_type == "3":
+                months_left = read_number("Months Left: ", int)
+                return SubscriptionProduct(product_id, product_name, price, stock_quantity, months_left, supplier)
+            else:
+                print("Invalid option. Please choose 1, 2 or 3.")                
+
+    #Common function 3: Option 4 helper - pick an EXISTING product (created earlier, not currently in the inventory) and add it
+    def add_existing_product(self) -> None:
+        print("\nAdd Existing Product to Inventory")
+        available = [p for p in self.created_products if self.inventory.find_product(p.product_id) is None]
+        if not available:
+            print("No created products available. Create one in option 2 first.")
+            return
+        for p in available:
+            print(f"{p.product_id} - {p.product_name}")
+        product = find_product(available, input("Enter Product ID to add: ").strip())
+        if product is None:
+            print("Product not found.")
+            return
+        try:
+            self.inventory.add_product(product) # passes the existing object, not a copy
+            print("Product added to inventory successfully!")
+        except ValueError as e:
+            print(e)
+
+    #Common function 4: Option 5 helper - remove a product from the inventory, but keep it usable (e.g. to re-add later)
+    def remove_product_interface(self):
+        print("\nRemove Product from Inventory")
+        product_id = input("Enter Product ID to remove: ").strip()
+        product = self.inventory.find_product(product_id)
+        if product is not None and self.inventory.remove_product(product_id):
+            if product not in self.created_products: # keep the object usable (e.g. loaded from file)
+                self.created_products.append(product)
+                print("Product removed from inventory.")
+            else:
+                print("Product not found.")
 
     #Main startup screen [Screen Input for 1-6]
     def main(self):
@@ -412,14 +431,16 @@ class MainProgram:
             if choice == "1":
                 self.inventory.display_all()
             elif choice == "2":
-                self.inventory.create_product()
+                product = self.prompt_for_product()
+                if product is not None:
+                    self.created_products.append(product)
+                    print("Product created. Use option 4 to add it to the inventory.")
             elif choice == "3":
                 self.inventory.update_stock()
             elif choice == "4":
-                product = self.create_product()  # Create a new product to add to inventory
-                self.inventory.add_product(product)
+                self.add_existing_product()
             elif choice == "5":
-                self.inventory.remove_product()
+                self.remove_product_interface()
             elif choice == "6":
                 self.inventory.search_product()
             elif choice == "7":
