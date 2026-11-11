@@ -331,6 +331,29 @@ class Inventory:
         print(product.get_fulfilment_info())
         print("-" * SEPARATOR_WIDTH)
 
+#4.1 OrderLine Class - Represents a single line in an order, containing a product and its quantity.
+class OrderLine:
+    def __init__(self, product: Product, quantity: int):
+        self.product = product
+        self.quantity = quantity
+
+    def calculate_subtotal(self) -> float:
+        return self.product.price * self.quantity
+
+#4.2 Order Class - Represents an order containing multiple order lines.
+class Order:
+    def __init__(self, order_id: str):
+        self.order_id: str = order_id
+        self.order_lines: list[OrderLine] = []
+
+    def add_order_line(self, product: Product, quantity: int) -> None:
+        order_line = OrderLine(product, quantity)
+        self.order_lines.append(order_line)
+
+    def calculate_total(self) -> float:
+        return sum(line.calculate_subtotal() for line in self.order_lines)
+
+
 #Create the MainProgram Class - Main menu & startup
 class MainProgram:
     def __init__(self):
