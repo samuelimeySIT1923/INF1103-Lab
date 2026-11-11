@@ -154,9 +154,9 @@ class Product(ABC):
         pass
 
     def get_details(self): #Regular Method - Children can extend from this method
-        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} |",
-                f"Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}|",
-                f"Supplier ID: {self.__supplier.supplier_id} | Supplier Name: {self.__supplier.supplier_name} |",
+        return (f"ID: {self.__product_id} | Product Name: {self.__product_name} |"
+                f"Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}|"
+                f"Supplier ID: {self.__supplier.supplier_id} | Supplier Name: {self.__supplier.supplier_name} |"
                 f"Supplier Contact Email: {self.__supplier.contact_email}")
 
     def display_information(self):
@@ -295,19 +295,19 @@ class Inventory:
             return
         print("Product Found:")
         print(f"Name: {product.product_name}")
-        print(f"Current Stock: {product.stock_quantity}")
+        print(f"Current Stock: {product.stock}")
         new_stock = read_number("New Stock Quantity: ", int)
-        change = new_stock - product.stock_quantity
-        product.stock_quantity = new_stock
+        change = new_stock - product.stock
+        product.stock = new_stock
         record_transaction(self.__transactions, product.product_id, change, "update")
         print("Stock updated successfully!")
 
     #3.2 Add Existing Product to inventory [4]
-    def add_product(self, product_id: str) -> None:
+    def add_product(self, product: Product) -> None:
         if self.find_product(product.product_id) is not None:
             raise ValueError(f"Product ID {product.product_id} already exists in the inventory.")
         self.__products.append(product)
-        record_transaction(self.__transactions, product.product_id, product.stock_quantity, "add to inv")
+        record_transaction(self.__transactions, product.product_id, product.stock, "add to inv")
 
     #3.2 Remove Product from Inventory [5]
     def remove_product(self, product_id: str) -> bool:
@@ -315,7 +315,7 @@ class Inventory:
         if product is None:
             return False
         self.__products.remove(product)
-        record_transaction(self.__transactions, product.product_id, -product.stock_quantity, "remove from inv")
+        record_transaction(self.__transactions, product.product_id, -product.stock, "remove from inv")
         return True
         
   #Search for a Product [6] <Find Within whole list>
@@ -337,6 +337,7 @@ class MainProgram:
         self.file_handler = FileHandling()
         products, self.transactions = self.file_handler.load_inventory()
         self.inventory = Inventory(products, self.transactions)
+        self.created_products: list[Product] = []
 
     #Menu System - Create menu options for Display, Add, Update, Search, Save and Exit.
     def show_menu(self):
@@ -412,12 +413,13 @@ class MainProgram:
         print("\nRemove Product from Inventory")
         product_id = input("Enter Product ID to remove: ").strip()
         product = self.inventory.find_product(product_id)
-        if product is not None and self.inventory.remove_product(product_id):
-            if product not in self.created_products: # keep the object usable (e.g. loaded from file)
-                self.created_products.append(product)
-                print("Product removed from inventory.")
-            else:
-                print("Product not found.")
+        if product is None:
+            print("Product not found.")
+            return
+        self.inventory.remove_product(product_id)
+        if product not in self.created_products:
+            self.created_products.append(product)
+        print("Product removed from inventory.")
 
     #Main startup screen [Screen Input for 1-6]
     def main(self):
