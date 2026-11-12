@@ -148,7 +148,9 @@ class Product(ABC):
     def stock(self, value):
         self.__stock_quantity = value
 
-    #Convert Product into an abstract class
+    #6.3 A contract that no matter what type of product, it must implement a method to return fulfilment information.
+    # The subclasses preserve it by having the same signautre, return type and meaning. This allows the Inventory to 
+    # call get_fulfilment_info() on any product type without knowing the details of that type.
     @abstractmethod
     def get_fulfilment_info(self):
         pass
@@ -158,6 +160,13 @@ class Product(ABC):
                 f"Price: ${self.__price:.2f} | Stock: {self.__stock_quantity}|"
                 f"Supplier ID: {self.__supplier.supplier_id} | Supplier Name: {self.__supplier.supplier_name} |"
                 f"Supplier Contact Email: {self.__supplier.contact_email}")
+
+    #written promise for what update_stock should mean for every product type.
+    def update_stock(self, quantity: int) -> None:
+        """Set stock to `quantity`. Raises ValueError if quantity < 0."""
+        if quantity < 0:
+            raise ValueError("Stock cannot be negative.")
+        self.__stock_quantity = quantity
 
     def display_information(self):
         print(self.get_details())
@@ -192,7 +201,7 @@ class PhysicalProduct (Product, CanBeShipped):
         data["weight"] = self.weight
         return data
 
-#Implement the required method [PhysicalProduct]
+#Implement the required method [PhysicalProduct] to return fulfilment information (ie name + shipping cost).
     def get_fulfilment_info(self):
         return f"Product {self.product_name} will be require physical shipping. \nEstimated shipping cost: ${self.calculate_shipping_cost(self.weight):.2f}"
     
@@ -222,7 +231,7 @@ class DigitalProduct(Product):
         data["download_size"] = self.download_size
         return data
 
-#Implement the required method [DigitalProduct]
+#Implement the required method [DigitalProduct] to return fulfilment information (ie name + download size).
     def get_fulfilment_info(self):
         return f"Product {self.product_name} will be delivered to you digitally. Download size: {self.download_size} MB"
 
@@ -247,6 +256,7 @@ class SubscriptionProduct(Product):
         data["months_left"] = self.validity_period
         return data
 
+#Implement the required method [SubscriptionProduct] to return fulfilment information (ie name + months left).
     def get_fulfilment_info(self):
         return f"Product {self.product_name} is a subscription. {self.validity_period} month(s) left before expiry."
 
@@ -278,7 +288,7 @@ class Inventory:
         return find_product(self.__products, product_id)
 
     #Display all Products [1]
-    def display_all(self):
+    def display_all(self) -> None:
         print("\nCurrent Inventory")
         print("-" * SEPARATOR_WIDTH) 
         if not self.__products: #nothing in inventory
@@ -300,7 +310,7 @@ class Inventory:
         print(f"Current Stock: {product.stock}")
         new_stock = read_number("New Stock Quantity: ", int)
         change = new_stock - product.stock
-        product.stock = new_stock
+        product.update_stock(new_stock)
         record_transaction(self.__transactions, product.product_id, change, "update")
         print("Stock updated successfully!")
 
