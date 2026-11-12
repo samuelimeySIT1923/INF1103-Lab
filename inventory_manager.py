@@ -148,12 +148,23 @@ class Product(ABC):
     def stock(self, value):
         self.__stock_quantity = value
 
+    @property
+    def products(self) -> list[Product]:
+        return list(self.__products)   # a copy, so outside code can't edit your list
+
     #6.3 A contract that no matter what type of product, it must implement a method to return fulfilment information.
     # The subclasses preserve it by having the same signautre, return type and meaning. This allows the Inventory to 
     # call get_fulfilment_info() on any product type without knowing the details of that type.
     @abstractmethod
     def get_fulfilment_info(self):
         pass
+
+    #7.3 get_fulfilment_info() demonstrates polymorphism as the child methods respond to the same method call in their
+    # own way, based on their own data. This allows the Inventory to call get_fulfilment_info() on any product type 
+    # without knowing the details of that type. 
+    # LSP supports this by esnuring that the subclasses preserve the same signature, return type and meaning of the method.
+    #This guarantees that every implementation is safe to call, and that the Inventory can rely on the method to behave 
+    # consistently across all product types.
 
     def get_details(self): #Regular Method - Children can extend from this method
         return (f"ID: {self.__product_id} | Product Name: {self.__product_name} |"
