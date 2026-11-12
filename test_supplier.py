@@ -9,9 +9,9 @@ inventory.add_product(SubscriptionProduct("S001", "Streaming Plan", 9.99, 50, 12
 
 # PREDICTIONS - written BEFORE running, keyed by product ID
 predicted = {
-    "P001": "...",   # your prediction
-    "D001": "...",
-    "S001": "...",
+    "P001": "Product Laptop will be require physical shipping. \nEstimated shipping cost: $10.00",
+    "D001": "Product E-Book will be delivered to you digitally. Download size: 3.2 MB",
+    "S001": "Product Streaming Plan is a subscription. 12 month(s) left before expiry."
 }
 
 # ONE loop over the common Product type: no isinstance, no separate loops
