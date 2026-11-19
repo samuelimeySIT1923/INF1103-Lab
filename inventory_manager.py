@@ -131,6 +131,8 @@ class Product(ABC):
         self.__supplier: Supplier = supplier
         self.__product_id = product_id
         self.__product_name = product_name
+        if not price > 0:  # NaN price is rejected too
+            raise ValueError("Price must be greater than zero.")
         self.__price = price
         self.__stock_quantity = stock_quantity
 
@@ -149,6 +151,8 @@ class Product(ABC):
         return self.__stock_quantity
     @stock.setter
     def stock(self, value):
+        if value < 0:
+            raise ValueError("Stock quantity cannot be negative.")
         self.__stock_quantity = value
 
     @property
@@ -376,6 +380,16 @@ class OrderLine:
         self.product = product
         self.quantity = quantity
 
+    @property
+    def quantity(self) -> int:
+        return self.__quantity
+
+    @quantity.setter
+    def quantity(self, value: int) -> None:
+        if value <= 0:
+            raise ValueError("Quantity must be greater than zero.")
+        self.__quantity = value
+
     def calculate_subtotal(self) -> float:
         return self.product.price * self.quantity
 
@@ -549,6 +563,18 @@ class MainProgram:
         if product not in self.created_products:
             self.created_products.append(product)
         print("Product removed from inventory.")
+
+    #5.1 Common Function 5: Keep Asking for positive Price
+    def get_positive_float(prompt: str) -> float:
+        while True:
+            try:
+                value = float(input(prompt))
+                if not value > 0:  # "not > 0" instead of "<= 0" so that nan is rejected too
+                    print("Please enter a number greater than zero.")
+                    continue
+                return value
+            except ValueError:
+                print("Please enter a valid number, e.g. 12.50")
 
     #Main startup screen [Screen Input for 1-6]
     def main(self):
