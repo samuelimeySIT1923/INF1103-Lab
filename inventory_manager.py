@@ -354,7 +354,7 @@ class Inventory:
         print(product.get_fulfilment_info())
         print("-" * SEPARATOR_WIDTH)
 
-#4.1 OrderLine Class - Represents a single line in an order, containing a product and its quantity.
+#OrderLine Class - Represents a single line in an order, containing a product and its quantity.
 class OrderLine:
     def __init__(self, product: Product, quantity: int):
         self.product = product
@@ -363,18 +363,68 @@ class OrderLine:
     def calculate_subtotal(self) -> float:
         return self.product.price * self.quantity
 
-#4.2 Order Class - Represents an order containing multiple order lines.
+#2.2 Discount Stategies for calculate_total
+class DiscountStrategy(ABC): 
+    @abstractmethod 
+    def apply(self, total: float) -> float: 
+        pass 
+
+#2.2.1 NoDiscount – returns the total unchanged. 
+class NoDiscount(DiscountStrategy):
+    def apply(self, total: float) -> float:
+        return total
+
+#2.2.2 PercentageDiscount –  takes a percentage when created, e.g. PercentageDiscount(10) takes 10% off. 
+class PercentageDiscount(DiscountStrategy):
+    def __init__(self, percentage: float):
+        if not 0 <= percentage <= 100:  # Validate percentage
+            raise ValueError("Percentage must be between 0 and 100.")
+        self.__percentage = percentage
+
+    @property
+    def percentage(self):
+        return self.__percentage
+    
+    def apply(self, total: float) -> float:
+        return total * (100 - self.__percentage / 100)
+
+#2.2.3 BulkDiscount – takes a threshold and an amount, e.g. BulkDiscount(200, 20) takes 20 off any total of 200 or more. 
+class BulkDiscount(DiscountStrategy):
+    def __init__(self, threshold: float, amount: float):
+        if threshold < 0:  # Validate threshold
+            raise ValueError("Threshold cannot be negative.")
+        if amount < 0:  # Validate amount
+            raise ValueError("Discount amount cannot be negative.")
+        self.__threshold = threshold
+        self.__amount = amount
+
+    @property
+    def threshold(self):
+        return self.__threshold
+    @property
+    def amount(self):
+        return self.__amount
+
+    def apply(self, total: float) -> float:
+        if total >= self.__threshold:
+            return max(0, total - self.__amount)
+        return total
+    
+
+#Order Class - Represents an order containing multiple order lines.
 class Order:
     def __init__(self, order_id: str):
         self.order_id: str = order_id
         self.order_lines: list[OrderLine] = []
+        self.discount: DiscountStrategy = NoDiscount()  # Default discount strategy
 
     def add_order_line(self, product: Product, quantity: int) -> None:
         order_line = OrderLine(product, quantity)
         self.order_lines.append(order_line)
 
     def calculate_total(self) -> float:
-        return sum(line.calculate_subtotal() for line in self.order_lines)
+        total = sum(line.calculate_subtotal() for line in self.order_lines) 
+        return self.discount.apply(total) 
 
 
 #Create the MainProgram Class - Main menu & startup
