@@ -1,4 +1,5 @@
 from itertools import product
+import csv
 import json
 import os
 from datetime import datetime
@@ -473,6 +474,35 @@ class Order:
         total = sum(line.calculate_subtotal() for line in self.order_lines) 
         return self.__discount.apply(total) 
 
+#5.2 Load products from a CSV file into the inventory. Each row in the CSV should contain product details.
+def load_products(path: str, inventory: Inventory, supplier: Supplier) -> None:
+    try:
+        file = open(path, newline="", encoding="utf-8-sig")  # utf-8-sig also copes with Excel's hidden BOM
+    except FileNotFoundError:
+        print(f"Products file not found: {path}")
+    except OSError as e:  # e.g. the path is a folder, or permission denied
+        print(f"Could not open {path}: {e}")
+    else:
+        loaded = 0
+        with file:
+            reader = csv.reader(file)
+            next(reader, None)  # skip the header row
+            for row in reader:
+                if not row:  # ignore blank lines
+                    continue
+                try:
+                    if len(row) != 5:
+                        raise ValueError(f"expected 5 columns, found {len(row)}")
+                    product_type, product_id, name, price, stock = (value.strip() for value in row)
+                    product = ProductFactory.create(product_type, product_id, name,
+                                                    float(price), int(stock), supplier, 0)
+                    inventory.add_product(product)
+                    loaded += 1
+                except ValueError as e:  # unknown type, bad number, broken rule, duplicate id...
+                    print(f"Skipped line {reader.line_num} ({','.join(row)}): {e}")
+        print(f"{loaded} products loaded.")
+    finally:
+        print("Load attempt finished.")
 
 #Create the MainProgram Class - Main menu & startup
 class MainProgram:
