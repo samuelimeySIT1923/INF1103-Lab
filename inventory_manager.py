@@ -3,6 +3,8 @@ import json
 import os
 from datetime import datetime
 from abc import ABC, abstractmethod
+
+from temp import DigitalProduct, PhysicalProduct
  
 FILENAME = "inventory.json"
 SEPARATOR_WIDTH = 48 #X dashes printed for formatting
@@ -47,14 +49,14 @@ def create_product(data: dict) -> "Product":
         supplier = Supplier("N/A", "Unknown Supplier", "N/A")
 
     if kind == "physical":
-        return PhysicalProduct(data["id"], data["product_name"], data["price"],
-                               data["stock"], data.get("weight", 0.0), supplier)
+        return ProductFactory.create("physical", data["id"], data["product_name"], data["price"],
+                                     data["stock"], supplier, data.get("weight", 0.0))
     if kind == "digital":
-        return DigitalProduct(data["id"], data["product_name"], data["price"],
-                              data["stock"], data["download_size"], supplier)
+        return ProductFactory.create("digital", data["id"], data["product_name"], data["price"],
+                                     data["stock"], supplier, data["download_size"])
     if kind == "subscription":
-        return SubscriptionProduct(data["id"], data["product_name"], data["price"],
-                                   data["stock"], data["months_left"], supplier)
+        return ProductFactory.create("subscription", data["id"], data["product_name"], data["price"],
+                                     data["stock"], supplier, data["months_left"])
     raise ValueError(f"Unknown product type: {kind}")
 
 #Create the FileHandling Class - Load & Save Inventory .json file
@@ -121,7 +123,8 @@ class Supplier:
     def from_dict(cls, data: dict) -> "Supplier":
         return cls(data["supplier_id"], data["supplier_name"], data["contact_email"])
 
-#2.2 Associate Supplier with Product
+
+#Associate Supplier with Product
 #Product Class - Handle Single Product Only
 class Product(ABC):
     def __init__(self, product_id: str, product_name: str, price: float, stock_quantity: int, supplier: Supplier):
@@ -185,6 +188,19 @@ class Product(ABC):
     def to_dict(self):
         return {"id": self.__product_id, "product_name": self.__product_name,
                 "price": self.__price, "stock":self.__stock_quantity, "supplier": self.__supplier.to_dict()}
+
+class ProductFactory: 
+    @staticmethod 
+    def create(product_type: str, product_id: str, name: str, price: float, 
+        stock_quantity: int, supplier: Supplier, type_value: float) -> Product: 
+        if product_type == "physical": 
+            return PhysicalProduct(product_id, name, price, stock_quantity, type_value, supplier) 
+        elif product_type == "digital": 
+            return DigitalProduct(product_id, name, price, stock_quantity, type_value, supplier) 
+        elif product_type == "subscription": 
+            return SubscriptionProduct(product_id, name, price, stock_quantity, type_value, supplier) 
+        else: 
+            raise ValueError(f"Unknown product type: {product_type}") 
 
 
 #Create a PhysicalProduct class (Parent, interface)
@@ -325,14 +341,14 @@ class Inventory:
         record_transaction(self.__transactions, product.product_id, change, "update")
         print("Stock updated successfully!")
 
-    #3.2 Add Existing Product to inventory [4]
+    #Add Existing Product to inventory [4]
     def add_product(self, product: Product) -> None:
         if self.find_product(product.product_id) is not None:
             raise ValueError(f"Product ID {product.product_id} already exists in the inventory.")
         self.__products.append(product)
         record_transaction(self.__transactions, product.product_id, product.stock, "add to inv")
 
-    #3.2 Remove Product from Inventory [5]
+    #Remove Product from Inventory [5]
     def remove_product(self, product_id: str) -> bool:
         product = self.find_product(product_id)
         if product is None:
@@ -492,13 +508,13 @@ class MainProgram:
             product_type = input("Choose Product Type (1, 2 or 3): ").strip()
             if product_type == "1":
                 weight = read_number("Weight (kg): ", float)
-                return PhysicalProduct(product_id, product_name, price, stock_quantity, weight, supplier)
+                return ProductFactory.create("physical", product_id, product_name, price, stock_quantity, supplier, weight)
             elif product_type == "2":
                 download_size = read_number("Download Size (MB): ", float)
-                return DigitalProduct(product_id, product_name, price, stock_quantity, download_size, supplier)
+                return ProductFactory.create("digital", product_id, product_name, price, stock_quantity, supplier, download_size)
             elif product_type == "3":
                 months_left = read_number("Months Left: ", int)
-                return SubscriptionProduct(product_id, product_name, price, stock_quantity, months_left, supplier)
+                return ProductFactory.create("subscription", product_id, product_name, price, stock_quantity, supplier, months_left)
             else:
                 print("Invalid option. Please choose 1, 2 or 3.")                
 
