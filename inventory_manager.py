@@ -38,7 +38,7 @@ def read_number(prompt: str, cast: type, minimum: int = 0) -> int:
             print("Invalid input. Please enter a number.")
 
 #Common Function 4 - Build the correct Product object from a saved dictionary (used when loading inventory.json)
-def create_product(data: dict) -> Product:
+def create_product(data: dict) -> "Product":
     kind = data.get("type", "physical")
     supplier_data = data.get("supplier", {})
     if supplier_data:
@@ -149,7 +149,7 @@ class Product(ABC):
         self.__stock_quantity = value
 
     @property
-    def products(self) -> list[Product]:
+    def products(self) -> "list[Product]":
         return list(self.__products)   # a copy, so outside code can't edit your list
 
     #6.3 A contract that no matter what type of product, it must implement a method to return fulfilment information.
@@ -386,7 +386,19 @@ class PercentageDiscount(DiscountStrategy):
         return self.__percentage
     
     def apply(self, total: float) -> float:
-        return total * (100 - self.__percentage / 100)
+        return total * (1 - self.__percentage / 100)
+
+#2.2.4 ResellerDiscount –  takes a percentage when created, e.g. PercentageDiscount(10) takes 10% off. 
+class ResellerDiscount(DiscountStrategy):
+    def __init__(self):
+        self.__percentage = 25  # Fixed percentage for resellers
+
+    @property
+    def percentage(self):
+        return self.__percentage
+    
+    def apply(self, total: float) -> float:
+        return total * (1 - self.__percentage / 100)
 
 #2.2.3 BulkDiscount – takes a threshold and an amount, e.g. BulkDiscount(200, 20) takes 20 off any total of 200 or more. 
 class BulkDiscount(DiscountStrategy):
@@ -416,7 +428,12 @@ class Order:
     def __init__(self, order_id: str):
         self.order_id: str = order_id
         self.order_lines: list[OrderLine] = []
-        self.discount: DiscountStrategy = NoDiscount()  # Default discount strategy
+        self.__discount: DiscountStrategy = NoDiscount()  # Default discount strategy
+
+    def set_discount(self, discount: DiscountStrategy) -> None:
+        if not isinstance(discount, DiscountStrategy):
+            raise TypeError("discount must be a DiscountStrategy.")
+        self.__discount = discount  
 
     def add_order_line(self, product: Product, quantity: int) -> None:
         order_line = OrderLine(product, quantity)
@@ -424,7 +441,7 @@ class Order:
 
     def calculate_total(self) -> float:
         total = sum(line.calculate_subtotal() for line in self.order_lines) 
-        return self.discount.apply(total) 
+        return self.__discount.apply(total) 
 
 
 #Create the MainProgram Class - Main menu & startup
