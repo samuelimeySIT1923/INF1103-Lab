@@ -1,11 +1,8 @@
-from itertools import product
 import csv
 import json
 import os
 from datetime import datetime
 from abc import ABC, abstractmethod
-
-from temp import DigitalProduct, PhysicalProduct
  
 FILENAME = "inventory.json"
 SEPARATOR_WIDTH = 48 #X dashes printed for formatting
@@ -59,6 +56,18 @@ def create_product(data: dict) -> "Product":
         return ProductFactory.create("subscription", data["id"], data["product_name"], data["price"],
                                      data["stock"], supplier, data["months_left"])
     raise ValueError(f"Unknown product type: {kind}")
+
+#5.1 Common Function 5: Keep Asking for positive Price
+def get_positive_float(prompt: str) -> float:
+    while True:
+        try:
+            value = float(input(prompt))
+            if not value > 0:  # "not > 0" instead of "<= 0" so that nan is rejected too
+                print("Please enter a number greater than zero.")
+                continue
+            return value
+        except ValueError:
+            print("Please enter a valid number, e.g. 12.50")
 
 #Create the FileHandling Class - Load & Save Inventory .json file
 class FileHandling:
@@ -135,7 +144,7 @@ class Product(ABC):
         if not price > 0:  # NaN price is rejected too
             raise ValueError("Price must be greater than zero.")
         self.__price = price
-        self.__stock_quantity = stock_quantity
+        self.stock = stock_quantity
 
     #Read-only access so child classes (and Inventory) can use the private data
     @property
@@ -184,8 +193,8 @@ class Product(ABC):
     def update_stock(self, quantity: int) -> None:
         """Set stock to `quantity`. Raises ValueError if quantity < 0."""
         if quantity < 0:
-            raise ValueError("Stock cannot be negative.")
-        self.__stock_quantity = quantity
+            raise ValueError("Stock quantity cannot be negative.")
+        self.stock = quantity
 
     def display_information(self):
         print(self.get_details())
@@ -456,15 +465,15 @@ class BulkDiscount(DiscountStrategy):
 
 #Order Class - Represents an order containing multiple order lines.
 class Order:
-    def __init__(self, order_id: str):
+    def __init__(self, order_id: str, order_discount: DiscountStrategy | None = None):
         self.order_id: str = order_id
         self.order_lines: list[OrderLine] = []
-        self.__discount: DiscountStrategy = NoDiscount()  # Default discount strategy
+        self.order_discount: DiscountStrategy = order_discount if order_discount is not None else NoDiscount()  # Default discount strategy
 
     def set_discount(self, discount: DiscountStrategy) -> None:
         if not isinstance(discount, DiscountStrategy):
             raise TypeError("discount must be a DiscountStrategy.")
-        self.__discount = discount  
+        self.order_discount = discount  
 
     def add_order_line(self, product: Product, quantity: int) -> None:
         order_line = OrderLine(product, quantity)
@@ -472,7 +481,7 @@ class Order:
 
     def calculate_total(self) -> float:
         total = sum(line.calculate_subtotal() for line in self.order_lines) 
-        return self.__discount.apply(total) 
+        return self.order_discount.apply(total) 
 
 #5.2 Load products from a CSV file into the inventory. Each row in the CSV should contain product details.
 def load_products(path: str, inventory: Inventory, supplier: Supplier) -> None:
@@ -540,7 +549,7 @@ class MainProgram:
             print("Product ID already exists.")
             return None
         product_name = input("Product Name: ").strip() #remove white spaces from input
-        price = read_number("Price: ", float) #price in float, accept decimal (Cents)
+        price = get_positive_float("Price: ") #price in float, accept decimal (Cents)
         stock_quantity = read_number("Stock Quantity: ", int) #stock in int, whole number only
         supplier = Supplier(
             input("Supplier ID: ").strip(),
@@ -594,17 +603,7 @@ class MainProgram:
             self.created_products.append(product)
         print("Product removed from inventory.")
 
-    #5.1 Common Function 5: Keep Asking for positive Price
-    def get_positive_float(prompt: str) -> float:
-        while True:
-            try:
-                value = float(input(prompt))
-                if not value > 0:  # "not > 0" instead of "<= 0" so that nan is rejected too
-                    print("Please enter a number greater than zero.")
-                    continue
-                return value
-            except ValueError:
-                print("Please enter a valid number, e.g. 12.50")
+    
 
     #Main startup screen [Screen Input for 1-6]
     def main(self):
@@ -618,7 +617,11 @@ class MainProgram:
             if choice == "1":
                 self.inventory.display_all()
             elif choice == "2":
-                product = self.prompt_for_product()
+                try:
+                    product = self.prompt_for_product()
+                except ValueError as e:  # a product class rejected the values
+                    print(f"Product not created: {e}")
+                    product = None
                 if product is not None:
                     self.created_products.append(product)
                     print("Product created. Use option 4 to add it to the inventory.")
