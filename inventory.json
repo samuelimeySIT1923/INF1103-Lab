@@ -1,44 +1,4 @@
 {
-    "products": [
-        {
-            "id": "0001",
-            "name": "cats",
-            "price": 10.0,
-            "stock": 100,
-            "supplier": {
-                "supplier_id": "sup01",
-                "supplier_name": "cat catcher",
-                "contact_email": "catcatcher@hotmail.com"
-            },
-            "type": "physical",
-            "weight": 1.0
-        },
-        {
-            "id": "0002",
-            "name": "Bugs",
-            "price": 0.1,
-            "stock": 1000,
-            "supplier": {
-                "supplier_id": "sup02",
-                "supplier_name": "H4ck3r",
-                "contact_email": "h4ck3r@123.com"
-            },
-            "type": "digital",
-            "download_size": 0.1
-        }
-    ],
-    "transactions": [
-        {
-            "time": "2026-11-10 22:12:27",
-            "product_id": "0001",
-            "type": "add",
-            "change": 100
-        },
-        {
-            "time": "2026-11-10 22:13:04",
-            "product_id": "0002",
-            "type": "add",
-            "change": 1000
-        }
-    ]
+    "products": [],
+    "transactions": []
 }

@@ -11,8 +11,8 @@ Docker:
 [version] docker --version
 [running?] docker ps
 
-
 Once Fully done:
+docker build -t getting-started .
 docker run --rm -it -v "${PWD}:/usr/src/app" -w /usr/src/app python:3.11-slim python {FileName}.py
 
 > Docker file contents:
